@@ -1,6 +1,6 @@
 # Brancher: A user-centered Python package for differentiable probabilistic inference
 
-Brancher allows design and train differentiable Bayesian models using stochastic variational inference. Brancher is based on the deep learning framework PyTorch. 
+Brancher allows to design and train differentiable Bayesian models using stochastic variational inference. Brancher is based on the deep learning framework PyTorch. 
 
 ## Building probabilistic models ##
 Probabilistic models are defined symbolically. Random variables can be created as follows:
