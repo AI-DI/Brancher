@@ -1,0 +1,14 @@
+.idea/
+.ipynb_checkpoints/
+.virtualenv/
+venv/
+bin/
+*.pyc
+*.egg-info
+*.tgz
+examples/data/*
+development_playgrounds/data/*
+development_playgrounds/WVGD_experiments
+brancher.egg-info/
+brancher.build/
+brancher.dist/

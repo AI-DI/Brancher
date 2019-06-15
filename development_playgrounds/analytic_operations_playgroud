@@ -1,0 +1,23 @@
+import numpy as np
+
+#import chainer.functions as F
+import chainer
+import chainer.links as L
+import chainer.functions as F
+
+import torch
+
+#from brancher.links import brancher_decorator
+from brancher.variables import DeterministicVariable, RandomVariable, ProbabilisticModel
+from brancher.standard_variables import NormalVariable
+from brancher.functions import BrancherFunction
+import brancher.functions as BF
+#import brancher.links as BL
+
+##
+a = NormalVariable(1., 0.001, name='a')
+b = NormalVariable(1., 0.001, name='b')
+
+c = a + b
+
+print(c.get_sample(10))
