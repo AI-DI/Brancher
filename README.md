@@ -1,4 +1,4 @@
-# Brancher: An Object-Oriented Variational Probabilistic Programming Library
+# Brancher: A user-centered Python package for differentiable probabilistic inference
 
 Brancher allows design and train differentiable Bayesian models using stochastic variational inference. Brancher is based on the deep learning framework PyTorch. 
 
