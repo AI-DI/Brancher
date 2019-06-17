@@ -575,7 +575,7 @@ class BinomialDistribution(UnivariateDistribution, DiscreteDistribution):
         self.has_analytic_var = True
 
 
-class BernulliDistribution(UnivariateDistribution, DiscreteDistribution):
+class BernoulliDistribution(UnivariateDistribution, DiscreteDistribution):
     """
     Summary
     """
