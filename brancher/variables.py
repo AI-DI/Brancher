@@ -845,7 +845,7 @@ class ProbabilisticModel(BrancherClass):
         if not posterior_model:
             self.check_posterior_model()
             posterior_model = self.posterior_model
-        if method is "ELBO":
+        if method == "ELBO":
             empirical_samples = self.observed_submodel._get_sample(1, observed=True, differentiable=False) #TODO Important!!: You need to correct for subsampling
             if for_gradient:
                 function = lambda samples: self.get_p_log_probabilities_from_q_samples(q_samples=samples,
