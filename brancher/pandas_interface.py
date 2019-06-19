@@ -33,10 +33,10 @@ def reformat_value(value, index):
     if is_tensor(value):
         if np.prod(value[index, :].shape) == 1:
             return float(value[index, :].cpu().detach().numpy())
-        elif value.shape[1] == 1:
-            return value[index, :].cpu().detach().numpy()[0, :]
-        else:
-            return value.cpu().detach().numpy()
+        else: #elif value.shape[1] == 1:
+            return value[index, :].cpu().detach().numpy()#[0, :]
+        #else:
+        #    return value.cpu().detach().numpy()
     elif isinstance(value, Iterable):
         return map_iterable(lambda x: reformat_value(x, index), value)
     else:
