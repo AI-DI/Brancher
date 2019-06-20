@@ -14,6 +14,7 @@ import torch
 
 from brancher.optimizers import ProbabilisticOptimizer
 from brancher.variables import Variable, ProbabilisticModel, Ensemble
+from brancher.standard_variables import DeterministicVariable
 from brancher.transformations import truncate_model
 from brancher.variables import RootVariable
 from brancher import gradient_estimators
@@ -50,7 +51,8 @@ from brancher.utilities import to_tensor
 def perform_inference(joint_model, number_iterations, number_samples = 1,
                       optimizer='Adam', input_values={},
                       inference_method=None,
-                      posterior_model=None, sampler_model=None,
+                      posterior_model=None,
+                      sampler_model=None,
                       pretraining_iterations=0,
                       **opt_params): #TODO: input values
     """
@@ -59,11 +61,15 @@ def perform_inference(joint_model, number_iterations, number_samples = 1,
     Parameters
     ---------
     """
+    if isinstance(joint_model, Variable):
+        joint_model = ProbabilisticModel([joint_model])
     if not inference_method:
         warnings.warn("The inference method was not specified, using the default reverse KL variational inference")
         inference_method = ReverseKL()
-    if not posterior_model:
+    if not posterior_model and joint_model.posterior_model is not None:
         posterior_model = joint_model.posterior_model
+    else:
+        posterior_model = inference_method.construct_posterior_model(joint_model)
     if not sampler_model: #TODO: clean up
         if not sampler_model:
             try:
@@ -82,7 +88,8 @@ def perform_inference(joint_model, number_iterations, number_samples = 1,
             optimizers_list.append(prob_opt)
 
     optimizers_list = []
-    append_prob_optimizer(posterior_model, optimizer, **opt_params)
+    if inference_method.learnable_posterior:
+        append_prob_optimizer(posterior_model, optimizer, **opt_params)
     if inference_method.learnable_model:
         append_prob_optimizer(joint_model, optimizer, **opt_params)
     if inference_method.learnable_sampler:
@@ -110,6 +117,9 @@ def perform_inference(joint_model, number_iterations, number_samples = 1,
 
     inference_method.post_process(joint_model) #TODO: this could be implemented with a with block
 
+    if joint_model.posterior_model is None and inference_method.learnable_posterior:
+        joint_model.set_posterior_model(posterior_model)
+
 
 class InferenceMethod(ABC):
 
@@ -125,10 +135,14 @@ class InferenceMethod(ABC):
     def post_process(self, joint_model):
         pass
 
+    def construct_posterior_model(self, joint_model):
+        raise ValueError("Automatic construction of the posterior model is not currently implemented for this inference method. Set the posterior model manually")
+
 
 class ReverseKL(InferenceMethod):
 
     def __init__(self, gradient_estimator=gradient_estimators.PathwiseDerivativeEstimator):
+        self.learnable_posterior = True
         self.learnable_model = True
         self.needs_sampler = False
         self.learnable_sampler = False
@@ -160,6 +174,7 @@ class WassersteinVariationalGradientDescent(InferenceMethod):
                  number_post_samples=20000,
                  gradient_estimator=gradient_estimators.PathwiseDerivativeEstimator):
         self.gradient_estimator = gradient_estimator
+        self.learnable_posterior = True
         self.learnable_model = False #TODO: to implement later
         self.needs_sampler = True
         self.learnable_sampler = True
@@ -248,16 +263,51 @@ class WassersteinVariationalGradientDescent(InferenceMethod):
         #joint_model.set_posterior_model(Ensemble(self.sampler_model, self.weights)) #TODO: Work in progress
 
 
-class MAP(InferenceMethod):
+class MaximumLikelihood(InferenceMethod):
 
     def __init__(self):
-        self.learnable_model = False  # TODO: to implement later
+        self.learnable_posterior = False
+        self.learnable_model = True
         self.needs_sampler = False
         self.learnable_sampler = False
 
+    def construct_posterior_model(self, joint_model):
+        return None
+
     def check_model_compatibility(self, joint_model, posterior_model, sampler_model):
         # TODO: Check differentiability of the model
-        assert all([isinstance(var, RootVariable) for var in posterior_model.flatten()])
+        pass
+
+    def compute_loss(self, joint_model, posterior_model, sampler_model, number_samples, input_values={}):
+        empirical_samples = joint_model.observed_submodel._get_sample(1, observed=True)
+        loss = -joint_model.calculate_log_probability(empirical_samples, for_gradient=True)
+        return loss.sum()
+
+    def correct_gradient(self, joint_model, posterior_model, sampler_model, number_samples, input_values={}):
+        pass
+
+    def post_process(self, joint_model):
+        pass
+
+
+class MAP(InferenceMethod):
+
+    def __init__(self):
+        self.learnable_posterior = True
+        self.learnable_model = True
+        self.needs_sampler = False
+        self.learnable_sampler = False
+
+    def construct_posterior_model(self, joint_model):
+        test_sample = joint_model._get_sample(1)
+        posterior_model = ProbabilisticModel([DeterministicVariable(value[0, 0, :], variable.name, learnable=True)
+                                              for variable, value in test_sample.items()
+                                              if (not variable.is_observed) and not isinstance(variable, (DeterministicVariable, RootVariable))])
+        return posterior_model
+
+    def check_model_compatibility(self, joint_model, posterior_model, sampler_model):
+        # TODO: Check differentiability of the model
+        assert all([isinstance(var, (RootVariable, DeterministicVariable)) for var in posterior_model.flatten()])
 
     def compute_loss(self, joint_model, posterior_model, sampler_model, number_samples, input_values={}):
         empirical_samples = joint_model.observed_submodel._get_sample(1, observed=True)
@@ -265,7 +315,7 @@ class MAP(InferenceMethod):
                                            target_model=joint_model)
         variable_values.update(empirical_samples)
         loss = -joint_model.calculate_log_probability(variable_values, for_gradient=True)
-        return loss
+        return loss.sum()
 
     def correct_gradient(self, joint_model, posterior_model, sampler_model, number_samples, input_values={}):
         pass
@@ -277,6 +327,7 @@ class MAP(InferenceMethod):
 class SteinVariationalGradientDescent(InferenceMethod): #TODO: work in progress
 
     def __init__(self):
+        self.learnable_posterior = True
         self.learnable_model = False  # TODO: to implement later
         self.needs_sampler = False
         self.learnable_sampler = False

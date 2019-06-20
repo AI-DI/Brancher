@@ -69,7 +69,6 @@ delta = BrancherFunction(torch_delta)
 
 
 ## Add batch dimension to NN weights in PyTorch convolutions ##
-## TODO: Fix the bias ##
 def __batch_conv(conv_func, *args, **kwargs):
     args = list(args)
     inpt_in_args = 0
@@ -84,33 +83,39 @@ def __batch_conv(conv_func, *args, **kwargs):
         weights = args.pop(1 - inpt_in_args)
     args = tuple(args)
     if "groups" in kwargs:
-        raise ValueError("Group convolutions are not currently supported in Brancher.")
+        raise ValueError("Group convolutions are currently not supported in Brancher.")
     in_channels = in_data.shape[1]
     out_channels = weights.shape[1]
     data_size = in_data.shape[2:]
     kernel_size = weights.shape[3:]
     batch_size = in_data.shape[0]
-    in_data_t = in_data.view((1,batch_size*in_channels) + data_size)
+    in_data_t = in_data.view((1, batch_size*in_channels) + data_size)
     weights_t = weights.view((batch_size*out_channels, in_channels) + kernel_size)
     out_t = conv_func(in_data_t, weights_t, groups=batch_size, *args, **kwargs)
     out_size = out_t.shape[2:]
     out = out_t.view((batch_size, out_channels) + out_size)
     return out
 
+
 def __batch_conv1d(*args, **kwargs):
     return __batch_conv(torch.nn.functional.conv1d, *args, **kwargs)
+
 
 def __batch_conv2d(*args, **kwargs):
     return __batch_conv(torch.nn.functional.conv2d, *args, **kwargs)
 
+
 def __batch_conv3d(*args, **kwargs):
     return __batch_conv(torch.nn.functional.conv3d, *args, **kwargs)
+
 
 def __batch_conv_transpose1d(*args, **kwargs):
     return __batch_conv(torch.nn.functional.conv_transpose1d, *args, **kwargs)
 
+
 def __batch_conv_transpose2d(*args, **kwargs):
     return __batch_conv(torch.nn.functional.conv_transpose2d, *args, **kwargs)
+
 
 def __batch_conv_transpose3d(*args, **kwargs):
     return __batch_conv(torch.nn.functional.conv_transpose3d, *args, **kwargs)
