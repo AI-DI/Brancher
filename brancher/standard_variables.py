@@ -144,13 +144,36 @@ class NormalVariable(VariableConstructor):
         super().__init__(name, loc=loc, scale=scale, learnable=learnable, ranges=ranges, is_observed=is_observed)
         self.distribution = distributions.NormalDistribution()
 
-    #def __add__(self, other):
-    #    if isinstance(other, NormalVariable):
-    #        return NormalVariable(self.partial_links["loc"] + other.partial_links["loc"],
-    #                              scale=BF.sqrt(self.partial_links["scale"]**2 + other.partial_links["scale"]**2),
-    #                              name=self.name + " + " + other.name, learnable=False)
-    #    else:
-    #        return super().__add__(other)
+
+class StudentTVariable(VariableConstructor):
+    """
+    Summary
+
+    Parameters
+    ----------
+    """
+    def __init__(self, df, loc, scale, name, learnable=False, is_observed=False):
+        self._type = "StudentT"
+        ranges = {"df": geometric_ranges.UnboundedRange(),
+                  "loc": geometric_ranges.UnboundedRange(),
+                  "scale": geometric_ranges.RightHalfLine(0.)}
+        super().__init__(name, df=df, loc=loc, scale=scale, learnable=learnable, ranges=ranges, is_observed=is_observed)
+        self.distribution = distributions.StudentTDistribution()
+
+
+class UniformVariable(VariableConstructor):
+    """
+    Summary
+
+    Parameters
+    ----------
+    """
+    def __init__(self, low, high, name, learnable=False, is_observed=False):
+        self._type = "Uniform"
+        ranges = {"low": geometric_ranges.UnboundedRange(),
+                  "high": geometric_ranges.UnboundedRange()}
+        super().__init__(name, low=low, high=high, learnable=learnable, ranges=ranges, is_observed=is_observed)
+        self.distribution = distributions.UniformDistribution()
 
 
 class CauchyVariable(VariableConstructor):
@@ -168,6 +191,63 @@ class CauchyVariable(VariableConstructor):
         self.distribution = distributions.CauchyDistribution()
 
 
+class HalfCauchyVariable(VariableConstructor):
+    """
+    Summary
+
+    Parameters
+    ----------
+    """
+    def __init__(self, scale, name, learnable=False, is_observed=False):
+        self._type = "HalfCauchy"
+        ranges = {"scale": geometric_ranges.RightHalfLine(0.)}
+        super().__init__(name, scale=scale, learnable=learnable, ranges=ranges, is_observed=is_observed)
+        self.distribution = distributions.HalfCauchyDistribution()
+
+
+class HalfNormalVariable(VariableConstructor):
+    """
+    Summary
+
+    Parameters
+    ----------
+    """
+    def __init__(self, scale, name, learnable=False, is_observed=False):
+        self._type = "HalfNormal"
+        ranges = {"scale": geometric_ranges.RightHalfLine(0.)}
+        super().__init__(name, scale=scale, learnable=learnable, ranges=ranges, is_observed=is_observed)
+        self.distribution = distributions.HalfNormalDistribution()
+
+
+class Chi2Variable(VariableConstructor):
+    """
+    Summary
+
+    Parameters
+    ----------
+    """
+    def __init__(self, df, name, learnable=False, is_observed=False):
+        self._type = "Chi2"
+        ranges = {"df": geometric_ranges.UnboundedRange()} #TODO: Natural number
+        super().__init__(name, df=df, learnable=learnable, ranges=ranges, is_observed=is_observed)
+        self.distribution = distributions.Chi2Distribution()
+
+
+class GumbelVariable(VariableConstructor):
+    """
+    Summary
+
+    Parameters
+    ----------
+    """
+    def __init__(self, loc, scale, name, learnable=False, is_observed=False):
+        self._type = "Gumbel"
+        ranges = {"loc": geometric_ranges.UnboundedRange(),
+                  "scale": geometric_ranges.RightHalfLine(0.)}
+        super().__init__(name, loc=loc, scale=scale, learnable=learnable, ranges=ranges, is_observed=is_observed)
+        self.distribution = distributions.GumbelDistribution()
+
+
 class LaplaceVariable(VariableConstructor):
     """
     Summary
@@ -181,6 +261,34 @@ class LaplaceVariable(VariableConstructor):
                   "scale": geometric_ranges.RightHalfLine(0.)}
         super().__init__(name, loc=loc, scale=scale, learnable=learnable, ranges=ranges, is_observed=is_observed)
         self.distribution = distributions.LaplaceDistribution()
+
+
+class ExponentialVariable(VariableConstructor):
+    """
+    Summary
+
+    Parameters
+    ----------
+    """
+    def __init__(self, rate, name, learnable=False, is_observed=False):
+        self._type = "Exponential"
+        ranges = {"rate": geometric_ranges.RightHalfLine(0.)}
+        super().__init__(name, rate=rate, learnable=learnable, ranges=ranges, is_observed=is_observed)
+        self.distribution = distributions.ExponentialDistribution()
+
+
+class PoissonVariable(VariableConstructor):
+    """
+    Summary
+
+    Parameters
+    ----------
+    """
+    def __init__(self, rate, name, learnable=False, is_observed=False):
+        self._type = "Poisson"
+        ranges = {"rate": geometric_ranges.RightHalfLine(0.)}
+        super().__init__(name, rate=rate, learnable=learnable, ranges=ranges, is_observed=is_observed)
+        self.distribution = distributions.PoissonDistribution()
 
 
 class LogNormalVariable(VariableConstructor):
@@ -221,7 +329,7 @@ class BetaVariable(VariableConstructor):
     ----------
     """
     def __init__(self, alpha, beta, name, learnable=False, is_observed=False):
-        self._type = "Logit Normal"
+        self._type = "Beta"
         concentration1 = alpha
         concentration0 = beta
         ranges = {"concentration1": geometric_ranges.RightHalfLine(0.),
@@ -241,7 +349,7 @@ class BinomialVariable(VariableConstructor):
     def __init__(self, total_count, probs=None, logits=None, name="Binomial", learnable=False, is_observed=False):
         self._type = "Binomial"
         if probs is not None and logits is None:
-            ranges = {"total_count": geometric_ranges.UnboundedRange(),
+            ranges = {"total_count": geometric_ranges.UnboundedRange(), #TODO: It should become natural number in the future
                       "probs": geometric_ranges.Interval(0., 1.)}
             super().__init__(name, total_count=total_count, probs=probs, learnable=learnable, ranges=ranges, is_observed=is_observed)
             self.distribution = distributions.BinomialDistribution()
@@ -255,29 +363,75 @@ class BinomialVariable(VariableConstructor):
                              "logits needs to be provided as input")
 
 
-class BernulliVariable(VariableConstructor):
+class NegativeBinomialVariable(VariableConstructor):
     """
     Summary
 
     Parameters
     ----------
     """
-    def __init__(self, probs=None, logits=None, name="Bernulli", learnable=False, is_observed=False):
-        self._type = "Bernulli"
+    def __init__(self, total_count, probs=None, logits=None, name="NegativeBinomial", learnable=False, is_observed=False):
+        self._type = "NegativeBinomial"
         if probs is not None and logits is None:
-            ranges = {"probs": geometric_ranges.Interval(0., 1.)}
-            super().__init__(name, probs=probs, learnable=learnable, ranges=ranges, is_observed=is_observed)
-            self.distribution = distributions.BernulliDistribution()
+            ranges = {"total_count": geometric_ranges.UnboundedRange(), #TODO: It should become natural number in the future
+                      "probs": geometric_ranges.Interval(0., 1.)}
+            super().__init__(name, total_count=total_count, probs=probs, learnable=learnable, ranges=ranges, is_observed=is_observed)
+            self.distribution = distributions.BinomialDistribution()
         elif logits is not None and probs is None:
-            ranges = {"logits": geometric_ranges.UnboundedRange()}
-            super().__init__(name, logits=logits, learnable=learnable, ranges=ranges)
-            self.distribution = distributions.BernulliDistribution()
+            ranges = {"total_count": geometric_ranges.UnboundedRange(),
+                      "logits": geometric_ranges.UnboundedRange()}
+            super().__init__(name, total_count=total_count, logits=logits, learnable=learnable, ranges=ranges)
+            self.distribution = distributions.NegativeBinomialDistribution()
         else:
             raise ValueError("Either probs or " +
                              "logits needs to be provided as input")
 
 
-class CategoricalVariable(VariableConstructor): #TODO: Work in progress
+class BernoulliVariable(VariableConstructor):
+    """
+    Summary
+
+    Parameters
+    ----------
+    """
+    def __init__(self, probs=None, logits=None, name="Bernoulli", learnable=False, is_observed=False):
+        self._type = "Bernoulli"
+        if probs is not None and logits is None:
+            ranges = {"probs": geometric_ranges.Interval(0., 1.)}
+            super().__init__(name, probs=probs, learnable=learnable, ranges=ranges, is_observed=is_observed)
+            self.distribution = distributions.BernoulliDistribution()
+        elif logits is not None and probs is None:
+            ranges = {"logits": geometric_ranges.UnboundedRange()}
+            super().__init__(name, logits=logits, learnable=learnable, ranges=ranges)
+            self.distribution = distributions.BernoulliDistribution()
+        else:
+            raise ValueError("Either probs or " +
+                             "logits needs to be provided as input")
+
+
+class GeometricVariable(VariableConstructor):
+    """
+    Summary
+
+    Parameters
+    ----------
+    """
+    def __init__(self, probs=None, logits=None, name="Geometric", learnable=False, is_observed=False):
+        self._type = "Geometric"
+        if probs is not None and logits is None:
+            ranges = {"probs": geometric_ranges.Interval(0., 1.)}
+            super().__init__(name, probs=probs, learnable=learnable, ranges=ranges, is_observed=is_observed)
+            self.distribution = distributions.GeometricDistribution()
+        elif logits is not None and probs is None:
+            ranges = {"logits": geometric_ranges.UnboundedRange()}
+            super().__init__(name, logits=logits, learnable=learnable, ranges=ranges)
+            self.distribution = distributions.GeometricDistribution()
+        else:
+            raise ValueError("Either probs or " +
+                             "logits needs to be provided as input")
+
+
+class CategoricalVariable(VariableConstructor):
     """
     Summary
 
@@ -345,3 +499,18 @@ class MultivariateNormalVariable(VariableConstructor):
         else:
             raise ValueError("Either covariance_matrix or precision_matrix or"+
                              "scale_tril needs to be provided as input")
+
+
+class DirichletVariable(VariableConstructor):
+    """
+    Summary
+
+    Parameters
+    ----------
+    """
+    def __init__(self, concentration, name, learnable=False, is_observed=False):
+        self._type = "Dirichlet"
+        ranges = {"concentration": geometric_ranges.RightHalfLine(0.)}
+        super().__init__(name, concentration=concentration,
+                         learnable=learnable, ranges=ranges, is_observed=is_observed)
+        self.distribution = distributions.DirichletDistribution()

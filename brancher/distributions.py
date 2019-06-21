@@ -331,6 +331,26 @@ class MultivariateNormalDistribution(VectorDistribution):
         self.has_analytic_var = True
 
 
+class DirichletDistribution(VectorDistribution):
+    """
+    Summary
+    """
+    def __init__(self):
+        super().__init__()
+        self.torchdist = torch.distributions.dirichlet.Dirichlet
+        self.required_parameters = {"concentration"}
+        self.optional_parameters = {}
+        self.vector_parameters = {"concentration"}
+        self.matrix_parameters = {}
+        self.scalar_parameters = {}
+        self.has_differentiable_samples = True
+        self.is_finite = False
+        self.is_discrete = False
+        self.has_analytic_entropy = True
+        self.has_analytic_mean = True
+        self.has_analytic_var = True
+
+
 class DeterministicDistribution(ImplicitDistribution):
     """
     Summary
@@ -490,6 +510,40 @@ class NormalDistribution(ContinuousDistribution, UnivariateDistribution):
         self.has_analytic_var = True
 
 
+class StudentTDistribution(ContinuousDistribution, UnivariateDistribution):
+    """
+    Summary
+    """
+    def __init__(self):
+        super().__init__()
+        self.torchdist = distributions.studentT.StudentT
+        self.required_parameters = {"df", "loc", "scale"}
+        self.optional_parameters = {}
+        self.has_differentiable_samples = True
+        self.is_finite = False
+        self.is_discrete = False
+        self.has_analytic_entropy = True
+        self.has_analytic_mean = True
+        self.has_analytic_var = True
+
+
+class UniformDistribution(ContinuousDistribution, UnivariateDistribution):
+    """
+    Summary
+    """
+    def __init__(self):
+        super().__init__()
+        self.torchdist = distributions.uniform.Uniform
+        self.required_parameters = {"low", "high"}
+        self.optional_parameters = {}
+        self.has_differentiable_samples = True
+        self.is_finite = False
+        self.is_discrete = False
+        self.has_analytic_entropy = True
+        self.has_analytic_mean = True
+        self.has_analytic_var = True
+
+
 class LogNormalDistribution(ContinuousDistribution, UnivariateDistribution):
     """
     Summary
@@ -524,6 +578,74 @@ class CauchyDistribution(ContinuousDistribution, UnivariateDistribution):
         self.has_analytic_var = False
 
 
+class HalfCauchyDistribution(ContinuousDistribution, UnivariateDistribution):
+    """
+    Summary
+    """
+    def __init__(self):
+        super().__init__()
+        self.torchdist = distributions.half_cauchy.HalfCauchy
+        self.required_parameters = {"scale"}
+        self.optional_parameters = {}
+        self.has_differentiable_samples = True
+        self.is_finite = False
+        self.is_discrete = False
+        self.has_analytic_entropy = True
+        self.has_analytic_mean = True
+        self.has_analytic_var = False
+
+
+class HalfNormalDistribution(ContinuousDistribution, UnivariateDistribution):
+    """
+    Summary
+    """
+    def __init__(self):
+        super().__init__()
+        self.torchdist = distributions.half_normal.HalfNormal
+        self.required_parameters = {"scale"}
+        self.optional_parameters = {}
+        self.has_differentiable_samples = True
+        self.is_finite = False
+        self.is_discrete = False
+        self.has_analytic_entropy = True
+        self.has_analytic_mean = True
+        self.has_analytic_var = True
+
+
+class Chi2Distribution(ContinuousDistribution, UnivariateDistribution):
+    """
+    Summary
+    """
+    def __init__(self):
+        super().__init__()
+        self.torchdist = distributions.chi2.Chi2
+        self.required_parameters = {"df"}
+        self.optional_parameters = {}
+        self.has_differentiable_samples = False
+        self.is_finite = False
+        self.is_discrete = False
+        self.has_analytic_entropy = False
+        self.has_analytic_mean = True
+        self.has_analytic_var = True
+
+
+class GumbelDistribution(ContinuousDistribution, UnivariateDistribution):
+    """
+    Summary
+    """
+    def __init__(self):
+        super().__init__()
+        self.torchdist = distributions.gumbel.Gumbel
+        self.required_parameters = {"loc", "scale"}
+        self.optional_parameters = {}
+        self.has_differentiable_samples = True
+        self.is_finite = False
+        self.is_discrete = False
+        self.has_analytic_entropy = True
+        self.has_analytic_mean = True
+        self.has_analytic_var = True
+
+
 class LaplaceDistribution(ContinuousDistribution, UnivariateDistribution):
     """
     Summary
@@ -532,6 +654,23 @@ class LaplaceDistribution(ContinuousDistribution, UnivariateDistribution):
         super().__init__()
         self.torchdist = distributions.laplace.Laplace
         self.required_parameters = {"loc", "scale"}
+        self.optional_parameters = {}
+        self.has_differentiable_samples = True
+        self.is_finite = False
+        self.is_discrete = False
+        self.has_analytic_entropy = True
+        self.has_analytic_mean = True
+        self.has_analytic_var = True
+
+
+class ExponentialDistribution(ContinuousDistribution, UnivariateDistribution):
+    """
+    Summary
+    """
+    def __init__(self):
+        super().__init__()
+        self.torchdist = distributions.exponential.Exponential
+        self.required_parameters = {"rate"}
         self.optional_parameters = {}
         self.has_differentiable_samples = True
         self.is_finite = False
@@ -575,6 +714,23 @@ class BinomialDistribution(UnivariateDistribution, DiscreteDistribution):
         self.has_analytic_var = True
 
 
+class NegativeBinomialDistribution(UnivariateDistribution, DiscreteDistribution):
+    """
+    Summary
+    """
+    def __init__(self):
+        super().__init__()
+        self.torchdist = distributions.negative_binomial.NegativeBinomial
+        self.required_parameters = {"total_count", ("probs", "logits")}
+        self.optional_parameters = {}
+        self.has_differentiable_samples = False
+        self.is_finite = True
+        self.is_discrete = True
+        self.has_analytic_entropy = False
+        self.has_analytic_mean = True
+        self.has_analytic_var = True
+
+
 class BernoulliDistribution(UnivariateDistribution, DiscreteDistribution):
     """
     Summary
@@ -588,6 +744,40 @@ class BernoulliDistribution(UnivariateDistribution, DiscreteDistribution):
         self.is_finite = True
         self.is_discrete = True
         self.has_analytic_entropy = True
+        self.has_analytic_mean = True
+        self.has_analytic_var = True
+
+
+class GeometricDistribution(UnivariateDistribution, DiscreteDistribution):
+    """
+    Summary
+    """
+    def __init__(self):
+        super().__init__()
+        self.torchdist = distributions.geometric.Geometric
+        self.required_parameters = {("probs", "logits")}
+        self.optional_parameters = {}
+        self.has_differentiable_samples = False
+        self.is_finite = True
+        self.is_discrete = True
+        self.has_analytic_entropy = True
+        self.has_analytic_mean = True
+        self.has_analytic_var = True
+
+
+class PoissonDistribution(DiscreteDistribution, UnivariateDistribution):
+    """
+    Summary
+    """
+    def __init__(self):
+        super().__init__()
+        self.torchdist = distributions.poisson.Poisson
+        self.required_parameters = {"rate"}
+        self.optional_parameters = {}
+        self.has_differentiable_samples = False
+        self.is_finite = False
+        self.is_discrete = True
+        self.has_analytic_entropy = False
         self.has_analytic_mean = True
         self.has_analytic_var = True
 
