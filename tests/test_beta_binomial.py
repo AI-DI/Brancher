@@ -8,11 +8,11 @@ from brancher import inference
 #Real model
 number_samples = 1
 p_real = 0.8
-k_real = BinomialVariable(number_samples, p=p_real, name="k")
+k_real = BinomialVariable(number_samples, probs=p_real, name="k")
 
 # betaNormal/Binomial model
 p = BetaVariable(1., 1., "p")
-k = BinomialVariable(number_samples, p=p, name="k")
+k = BinomialVariable(number_samples, probs=p, name="k")
 model = ProbabilisticModel([k])
 
 # Generate data
