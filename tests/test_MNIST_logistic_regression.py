@@ -29,7 +29,7 @@ weights = NormalVariable(np.zeros((number_output_classes, number_pixels)),
 
 # Forward pass
 final_activations = BF.matmul(weights, x)
-k = CategoricalVariable(softmax_p=final_activations, name="k")
+k = CategoricalVariable(probs=final_activations, name="k")
 
 # Probabilistic model
 model = ProbabilisticModel([k])

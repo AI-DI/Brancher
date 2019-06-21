@@ -37,7 +37,7 @@ weights2 = NormalVariable(np.zeros((number_output_classes, number_hidden_units))
 # Forward pass
 hidden_units = BF.tanh(BF.matmul(weights1, x) + b1)
 final_activations = BF.matmul(weights2, hidden_units) + b2
-k = CategoricalVariable(softmax_p=final_activations, name="k")
+k = CategoricalVariable(probs=final_activations, name="k")
 
 # Probabilistic model
 model = ProbabilisticModel([k])
