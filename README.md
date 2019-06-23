@@ -65,7 +65,7 @@ model.set_posterior_model(variational_posterior)
 ```
 
 ### Inference ###
-Now that the models are spicified we can perform approximate inference using stochastic gradient descent:
+Now that the models are specified we can perform approximate inference using stochastic gradient descent:
 
 ```python
 inference.perform_inference(AR_model, 
