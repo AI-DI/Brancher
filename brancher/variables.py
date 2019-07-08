@@ -1,7 +1,8 @@
 """
 Variables
 ---------
-Module description
+The variables module contains base classes for defining random and deterministic variables and the operations that can
+be done on these variables. It also contains the base classes of probabilistic models which contain random variables.
 """
 from abc import ABC, abstractmethod
 import operator
@@ -43,26 +44,51 @@ from brancher.pandas_interface import pandas_frame2value
 
 from brancher.config import device
 
-
-class BrancherClass(ABC): #This requires some refactoring, it should become a superclass of Variables and probabilistic models and Partial Links should be out
+#TODO: This requires some refactoring, it should become a superclass of Variables and probabilistic models and Partial Links should be out
+class BrancherClass(ABC):
     """
     BrancherClass is the abstract superclass of all Brancher variables and models.
     """
     @abstractmethod
     def _flatten(self):
         """
-        Abstract method. It returs a list of all the variables contained in the model.
+        Abstract method. It returns a list of all the ancestor variables of the variable or contained in the model.
+
+        Args: None.
+
+        Returns:
+            List.
         """
         pass
 
     @abstractmethod
     def _get_statistic(self, query, input_values):
         """
-        Abstract method.
+        Abstract method. It returns a statistical value of the distribution given a query and optional conditioning
+        parameters.
+
+        Args:
+            query: Function. A function that has as input a distribution with its parameters and as output torch.Tensor.
+            See distribution package for more details.
+
+            input_values: Dictionary(brancher.Variable: torch.Tensor, numeric, np.ndarray). A dictionary having the
+            brancher.Variables of the model as keys and torch.Tensor, np.array or number as values. This dictionary has
+            to provide values for all variables of the model except for the deterministic variables.
+
+        Returns:
+            torch.Tensor.
         """
         pass
 
     def flatten(self):
+        """
+        Method. Returns set of all the ancestor variables of the variable or contained in the model.
+
+        Args: None.
+
+        Returns:
+            Set.
+        """
         return set(self._flatten())
 
     def get_variable(self, var_name):
@@ -70,11 +96,10 @@ class BrancherClass(ABC): #This requires some refactoring, it should become a su
         It returns the variable in the model with the requested name.
 
         Args:
-            var_name: String. Name  of the requested variable.
+            var_name: String. Name of the requested variable.
 
         Returns:
-            torch.Tensor.
-
+            branchar.Variable.
         """
         flat_list = self._flatten()
         try:
@@ -111,49 +136,58 @@ class Variable(BrancherClass):
         Abstract method. It returns the log probability of the values given the model.
 
         Args:
-            values: Dictionary(brancher.Variable: chainer.Variable). A dictionary having the brancher.variables of the
-            model as keys and chainer.Variables as values. This dictionary has to provide values for all variables of
-            the model except for the deterministic variables.
+            values: Dictionary(brancher.Variable: torch.Tensor, numeric, np.ndarray). A dictionary having the
+            brancher.Variables of the model as keys and torch.Tensor, np.array or number as values. This dictionary has
+            to provide values for all variables of the model except for the deterministic variables.
 
             reevaluate: Bool. If false it returns the output of the latest call. It avoid unnecessary computations when
             multiple children variables ask for the log probability of the same paternt variable.
 
         Returns:
             torch.Tensor. the log probability of the input values given the model.
-
         """
         pass
 
     @abstractmethod
     def _get_sample(self, number_samples, resample, observed, input_values, differentiable):
         """
-        Abstract private method. It returns samples from the joint distribution specified by the model. If an input is provided
-        it only samples the variables that are not contained in the input.
+        Abstract private method. It returns samples from the joint distribution specified by the model. If an input is
+        provided it only samples the variables that are not contained in the input.
 
         Args:
-            number_samples: Int.
+            number_samples: Int. Number of samples that need to be generated.
 
-            resample: Bool. If true it returns its previously stored sampled. It is used when multiple children variables
-            ask for a sample to the same parent. In this case the resample variable is False since the children should be
-            fed with the same value of the parent.
+            resample: Bool. If true it returns its previously stored sampled. It is used when multiple children
+            variables ask for a sample to the same parent. In this case the resample variable is False since the
+            children should be fed with the same value of the parent.
 
             observed: Bool. It specifies whether the samples should be interpreted frequentistically as samples from the
             observations of as Bayesian samples from the prior model. The first batch dimension is reserved to Bayesian
             samples while the second batch dimension is reserved to observation samples. Theerefore, this boolean
             changes the shape of the resulting sampled array.
 
-            input_values: Dictionary(brancher.Variable, chainer.Variable). A dictionary having the brancher.variables of the
-            model as keys and chainer.Variables as values. This dictionary has to provide values for all variables of
-            the model that do not need to be sampled. Using an input allows to use a probabilistic model as a random
-            function.
+            input_values: Dictionary(brancher.Variable: torch.Tensor, numeric, np.ndarray). A dictionary having the
+            brancher.Variables of the model as keys and torch.Tensor, np.array or numberic values. This dictionary has
+            to provide values for all variables of the model that do not need to be sampled. Using an input allows to
+            use a probabilistic model as a random function.
 
         Returns:
             Dictionary(brancher.Variable: torch.Tensor). A dictionary of samples from all the variables of the model
-
         """
         pass
 
     def _get_entropy(self, input_values={}):
+        """
+        Method. It returns the entropy of the variable optionally conditioned on input values.
+
+        Args:
+            input_values: Dictionary(brancher.Variable: torch.Tensor, numeric, np.ndarray). A dictionary having the
+            brancher.Variables of the model as keys and torch.Tensor, np.array or number as values. This dictionary has
+            to provide values for all variables of the model except for the deterministic variables.
+
+        Returns:
+            torch.Tensor or np.array.
+        """
         if self.distribution.has_analytic_entropy:
             entropy_array = self._get_statistic(query=lambda dist, parameters: dist.get_entropy(**parameters),
                                                 input_values=input_values)
@@ -162,6 +196,20 @@ class Variable(BrancherClass):
             return -self.calculate_log_probability(input_values, include_parents=False)
 
     def get_sample(self, number_samples, input_values={}):
+        """
+        Method. It returns a user specified number of samples optionally conditioned on input values. The function
+        samples its parent variables recursively unless those variables were already samples in an earlier iteration.
+
+        Args:
+            number_samples: Int. Number of samples that need to be generated.
+
+            input_values: pandas.Dataframe or Dictionary(brancher.Variable: torch.Tensor, numeric, np.ndarray). A
+            dictionary having the brancher.Variables of the model as keys and torch.Tensor, np.array or numberic values.
+            This dictionary provides the values of variables to condition on.
+
+        Returns:
+            pandas.Dataframe. A pandas dataframe with a row for each sample and column for each variable in the model.
+        """
         reformatted_input_values = reformat_sampler_input(pandas_frame2dict(input_values),
                                                           number_samples=number_samples)
         raw_sample = {self: self._get_sample(number_samples, resample=False,
@@ -173,6 +221,18 @@ class Variable(BrancherClass):
         return sample
 
     def get_mean(self, input_values={}):
+        """
+        Method. It returns the mean value of the variable optionally conditioned on input values of variables. The
+        function iteratively gets the mean of each parent
+
+        Args:
+            input_values: pandas.Dataframe or Dictionary(brancher.Variable: torch.Tensor, numeric, np.ndarray). A
+            dictionary having the brancher.Variables of the model as keys and torch.Tensor, np.array or numberic values.
+            This dictionary provides the values of variables to condition on.
+
+        Returns:
+            pandas.Dataframe. A pandas dataframe with the mean or each variable
+        """
         reformatted_input_values = reformat_sampler_input(pandas_frame2dict(input_values),
                                                           number_samples=1)
         raw_mean = {self: self._get_mean(reformatted_input_values)}
@@ -180,6 +240,18 @@ class Variable(BrancherClass):
         return mean
 
     def get_variance(self, input_values={}):
+        """
+        Method. It returns the variance value of the variable optionally conditioned on input values of variables. The
+        function iteratively gets the variance of each parent
+
+        Args:
+            input_values: pandas.Dataframe or Dictionary(brancher.Variable: torch.Tensor, numeric, np.ndarray). A
+            dictionary having the brancher.Variables of the model as keys and torch.Tensor, np.array or numberic values.
+            This dictionary provides the values of variables to condition on.
+
+        Returns:
+            pandas.Dataframe. A pandas dataframe with the variance of each variable
+        """
         reformatted_input_values = reformat_sampler_input(pandas_frame2dict(input_values),
                                                           number_samples=1)
         raw_variance = {self: self._get_variance(reformatted_input_values)}
@@ -187,6 +259,18 @@ class Variable(BrancherClass):
         return variance
 
     def get_entropy(self, input_values={}):
+        """
+        Method. It returns the entropy of the variable optionally conditioned on input values of variables. The
+        function iteratively gets the entropy of each parent
+
+        Args:
+            input_values: pandas.Dataframe or Dictionary(brancher.Variable: torch.Tensor, numeric, np.ndarray). A
+            dictionary having the brancher.Variables of the model as keys and torch.Tensor, np.array or numberic values.
+            This dictionary provides the values of variables to condition on.
+
+        Returns:
+            pandas.Dataframe. A pandas dataframe with the variance of each variable
+        """
         reformatted_input_values = reformat_sampler_input(pandas_frame2dict(input_values),
                                                           number_samples=1)
         raw_ent = {self: self._get_entropy(reformatted_input_values)}
@@ -196,8 +280,8 @@ class Variable(BrancherClass):
     @abstractmethod
     def reset(self):
         """
-        Abstract method. It recursively resets the self._evalueted and self._current_value attributes of the variable and
-        all downstream variables. It is used after sampling and evaluating the log probability of a model.
+        Abstract method. It recursively resets the self._evaluated and self._current_value attributes of the variable
+        and all downstream variables. It is used after sampling and evaluating the log probability of a model.
 
         Args: None.
 
@@ -219,7 +303,7 @@ class Variable(BrancherClass):
 
     def __str__(self):
         """
-        Method.
+        Method. Returns name of variable
 
         Args: None
 
@@ -231,15 +315,16 @@ class Variable(BrancherClass):
         """
         Method. It is used for performing symbolic operations between variables. It always returns a partialLink object
         that define a mathematical operation between variables. The vars attribute of the link is the set of variables
-        that are used in the operation. The fn attribute is a lambda that specify the operation as a functions between the
-        values of the variables in vars and a numeric output. This is required for defining the forward pass of the model.
+        that are used in the operation. The fn attribute is a lambda that specify the operation as a functions between
+        the values of the variables in vars and a numeric output. This is required for defining the forward pass of the
+        model.
 
         Args:
-            other: PartialLink, RandomVariable, numeric or np.array.
+            other: brancher.PartialLink, brancher.RandomVariable, numeric or np.ndarray.
 
             op: Binary operator.
 
-        Returns: PartialLink
+        Returns: brancher.PartialLink
         """
         return var2link(self)._apply_operator(other, op)
 
@@ -277,6 +362,15 @@ class Variable(BrancherClass):
         raise NotImplementedError
 
     def __getitem__(self, key):
+        """
+        Method. Returns PartialLink representing one or more of the variables of this model or a slice of this variable.
+
+        Args:
+            key. String or Iterable or numeric. The names of (parent) variables or slices of the value of this variable.
+
+        Returns:
+            brancher.PartialLink.
+        """
         if isinstance(key, str):
             variable_slice = key
         elif isinstance(key, Iterable):
@@ -289,6 +383,14 @@ class Variable(BrancherClass):
         return PartialLink(vars=vars, fn=fn, links=links)
 
     def shape(self):
+        """
+        Method. Returns PartialLink representing the shape of the variable
+
+        Args: None
+
+        Returns:
+            brancher.PartialLink.
+        """
         vars = {self}
         fn = lambda values: values[self].shape
         links = set()
@@ -297,9 +399,9 @@ class Variable(BrancherClass):
 
 class RootVariable(Variable):
     """
-    Deterministic variables are a subclass of random variables that always return the same value. The hyper-parameters of
-    a probabilistic model are usually encoded as DeterministicVariables. When the user input a parameter as a Numeric value or
-    an array, Brancher created a RootVariable that store its value.
+    Deterministic variables are a subclass of random variables that always return the same value. The hyper-parameters
+    of a probabilistic model are usually encoded as DeterministicVariables. When the user inputs a parameter as a
+    numeric value or an array, brancher created a RootVariable that store its value.
 
     Parameters
     ----------
@@ -308,7 +410,9 @@ class RootVariable(Variable):
 
     name : String. The name of the variable.
 
-    learnable : Bool. This boolean value specify if the value of the RootVariable can be updated during traning.
+    learnable : Bool. This boolean value specify if the value of the RootVariable can be updated during training.
+
+    is_observed: Bool. This boolean indicates whether the variable is observed with the data.
 
     """
     def __init__(self, data, name, learnable=False, is_observed=False):
@@ -332,16 +436,22 @@ class RootVariable(Variable):
 
     def calculate_log_probability(self, values, reevaluate=True, for_gradient=False, normalized=True, include_parents=False):
         """
-        Method. It returns the log probability of the values given the model. This value is always 0 since the probability
-        of a deterministic variable having its value is always 1.
+        Method. It returns the log probability of the values given the model. This value is always 0 since the
+        probability of a deterministic variable having its value is always 1.
 
         Args:
-            values: Dictionary(brancher.Variable: chainer.Variable). A dictionary having the brancher.variables of the
-            model as keys and chainer.Variables as values. This dictionary has to provide values for all variables of
-            the model except for the deterministic variables.
+            values: Dictionary(brancher.Variable: torch.Tensor, numeric, np.ndarray). A dictionary having the
+            brancher.Variables of the model as keys and torch.Tensor number or np.array as values. This dictionary has
+            to provide values for all variables of the model except for the deterministic variables.
 
             reevaluate: Bool. If false it returns the output of the latest call. It avoid unnecessary computations when
             multiple children variables ask for the log probability of the same paternt variable.
+
+            for_gradient: Bool. Unused.
+
+            include_parents: Bool. If True, return parents log probability + own log probability
+
+            normalized: Bool. Unused.
 
         Returns:
             torch.Tensor. The log probability of the input values given the model.
@@ -351,20 +461,77 @@ class RootVariable(Variable):
 
     @property
     def value(self):
+        """
+        Method. It returns the value of the deterministic variable.
+
+        Args: None.
+
+        Returns:
+            torch.Tensor. The value of the deterministic variable.
+        """
         if self.learnable:
             return self.link()
         return self._value
 
     @property
     def is_observed(self):
+        """
+        Method. It returns whether variable is observed or not.
+
+        Args: None.
+
+        Returns:
+            Bool.
+        """
         return self._observed
 
     def _get_statistic(self, query, input_values):
+        """
+        Private method. It returns a statistical value of the distribution given a query and optional conditioning
+        parameters.
+
+        Args:
+            query: Function. A function that has as input a distribution with its parameters and as output torch.Tensor.
+            See distribution package for more details.
+
+            input_values: Dictionary(brancher.Variable: torch.Tensor, numeric, np.ndarray). A dictionary having the
+            brancher.Variables of the model as keys and torch.Tensor, np.array or number as values. This dictionary has
+            to provide values for all variables of the model except for the deterministic variables.
+
+        Returns:
+            torch.Tensor.
+        """
         parameters_dict = {"value": self.value}
         statistic = query(self.distribution, parameters_dict)
         return statistic
 
     def _get_sample(self, number_samples, resample=False, observed=False, input_values={}, differentiable=True):
+        """                                                                                                             
+        Private method. It returns samples from the joint distribution specified by the model. If an input is
+        provided it only samples the variables that are not contained in the input.                                     
+
+        Args:                                                                                                           
+            number_samples: Int. Number of samples that need to be generated.                                           
+
+            resample: Bool. If true it returns its previously stored sampled. It is used when multiple children         
+            variables ask for a sample to the same parent. In this case the resample variable is False since the        
+            children should be fed with the same value of the parent.                                                   
+
+            observed: Bool. It specifies whether the samples should be interpreted frequentistically as samples from the
+            observations of as Bayesian samples from the prior model. The first batch dimension is reserved to Bayesian 
+            samples while the second batch dimension is reserved to observation samples. Therefore, this boolean
+            changes the shape of the resulting sampled array.                                                           
+
+            input_values: Dictionary(brancher.Variable: torch.Tensor, numeric, np.ndarray). A dictionary having the
+            brancher.Variables of the model as keys and torch.Tensor, np.array or numberic values. This dictionary has  
+            to provide values for all variables of the model that do not need to be sampled. Using an input allows to   
+            use a probabilistic model as a random function.
+
+            differentiable: Bool. Unused.
+
+        Returns:                                                                                                        
+            Dictionary(brancher.Variable: torch.Tensor). A dictionary of samples from all the variables of the model    
+        """
         if self in input_values:
             value = input_values[self]
         else:
@@ -375,9 +542,22 @@ class RootVariable(Variable):
             return {self: value}
 
     def reset(self, recursive=False):
+        """
+        Method. It recursively resets the self._evaluated and self._current_value attributes of the variable
+        and all downstream variables. It is used after sampling and evaluating the log probability of a model. Root
+        variables are not reset and do not have children to recursivly reset.
+
+        Args:
+            recursive: Bool. If true, children are also reset.
+
+        Returns: None.
+        """
         pass
 
     def _flatten(self):
+        """
+        Private method. Returns empty list of variables because root variables have no parent variables.
+        """
         return []
 
 
@@ -394,8 +574,9 @@ class RandomVariable(Variable):
     parents : tuple of brancher variables
         A tuple of brancher.Variables that are parents of the random variable.
     link : callable
-        A function Dictionary(brancher.variable: torch.tensor) -> Dictionary(str: torch.tensor) that maps the values of all the parents
-        to a dictionary of parameters of the probability distribution. It can also contains learnable layers and parameters.
+        A function Dictionary(brancher.variable: torch.Tensor) -> Dictionary(str: torch.Tensor) that maps the values of
+        all the parents to a dictionary of parameters of the probability distribution. It can also contain learnable
+        layers and parameters.
     """
     def __init__(self, distribution, name, parents, link):
         self.name = name
@@ -416,13 +597,12 @@ class RandomVariable(Variable):
     @property
     def value(self):
         """
-        Method. It returns the value of the deterministic variable.
+        Method. It returns the value of the random variable if observed.
 
-        Args:
-            None
+        Args: None.
 
         Returns:
-            torch.Tensor. The value of the deterministic variable.
+            torch.Tensor. The observed value of the random variable.
         """
         if self._observed:
             return self._observed_value
@@ -431,9 +611,26 @@ class RandomVariable(Variable):
 
     @property
     def is_observed(self):
+        """
+        Method. It returns whether variable is observed or not.
+
+        Args: None.
+
+        Returns:
+            Bool.
+        """
         return self._observed
 
     def _apply_link(self, parents_values):
+        """
+        Private method. Applies link function to parents values while keeping the original shape of the input.
+
+        Args:
+            parents_values: Dictionary(brancher.Variable: torch.Tensor, numeric, np.ndarray).
+
+        Returns:
+            Dictionary(brancher.Variable: torch.Tensor, numeric, or np.ndarray) with link applied to the values.
+        """
         number_samples, number_datapoints = get_number_samples_and_datapoints(parents_values)
         cont_values, discrete_values = split_dict(parents_values,
                                                   condition=lambda key, val: not is_discrete(val) or contains_tensors(val))
@@ -450,11 +647,14 @@ class RandomVariable(Variable):
 
     def _get_parameters_from_input_values(self, input_values):
         """
-        Method.
+        Private method. It returns a dict of values for all parents of this variable with this variable's link applied
+        to those values.
 
         Args:
+            input_values: Dictionary(brancher.Variable: torch.Tensor, numeric, np.ndarray).
 
         Returns:
+            Dictionary(str: torch.Tensor). Result of this variable's link function on all parent values.
         """
         if input_values:
             number_samples, _ = get_number_samples_and_datapoints(input_values)
@@ -469,15 +669,18 @@ class RandomVariable(Variable):
 
     def _get_its_own_value_from_input(self, input_values, reevaluate):
         """
-        Method.
+        Private method. Helper function for getting value of this variable from the input dict if it is there or else
+        either sample it when it is a "Deterministic node" type or return its value
 
         Args:
+            input_values: Dictionary(brancher.Variable: torch.Tensor, numeric, np.ndarray).
 
         Returns:
+            torch.Tensor, numeric, or np.ndarray. The value of this variable.
         """
         if self in input_values:
             value = input_values[self]
-        elif self._type == "deterministic node":
+        elif self._type == "Deterministic node":
             value = self._get_sample(1, input_values=input_values)[self]
         else:
             value = self.value
@@ -490,16 +693,21 @@ class RandomVariable(Variable):
         of a deterministic variable having its value is always 1.
 
         Args:
-            values: Dictionary(brancher.Variable: chainer.Variable). A dictionary having the brancher.variables of the
-            model as keys and chainer.Variables as values. This dictionary has to provide values for all variables of
-            the model except for the deterministic variables.
+            input_values: Dictionary(brancher.Variable: torch.Tensor, numeric, np.ndarray or dict). A dictionary having the
+            brancher.Variables of the model as keys and torch.Tensor number or np.array as values. This dictionary has
+            to provide values for all variables of the model except for the deterministic variables.
 
             reevaluate: Bool. If false it returns the output of the latest call. It avoid unnecessary computations when
             multiple children variables ask for the log probability of the same paternt variable.
 
+            for_gradient: Bool. Unused.
+
+            include_parents: Bool. If True, return parents log probability + own log probability
+
+            normalized: Boo. Unused.
+
         Returns:
             torch.Tensor. The log probability of the input values given the model.
-
         """
         if self._evaluated and not reevaluate:
             return 0.
@@ -520,30 +728,43 @@ class RandomVariable(Variable):
             return log_probability
 
     def _get_statistic(self, query, input_values):
+        """
+        Private method. It returns a statistical value of the distribution given a query and optional conditioning
+        parameters.
+
+        Args:
+            query: Function. A function that has as input a distribution with its parameters and as output torch.Tensor.
+            See distribution package for more details.
+
+            input_values: Dictionary(brancher.Variable: torch.Tensor, numeric, np.ndarray).
+
+        Returns:
+            torch.Tensor.
+        """
         parameters_dict = self._get_parameters_from_input_values(input_values)
         statistic = query(self.distribution, parameters_dict)
         return statistic
 
     def _get_sample(self, number_samples=1, resample=True, observed=False, input_values={}, differentiable=True):
         """
-        Method. Used internally. It returns samples from the random variable and all its parents.
+        Private method. Used internally. It returns samples from the random variable by sampling all its parents and
+        itself.
 
         Args:
-            number_samples: . A dictionary having the brancher.variables of the
-            model as keys and chainer.Variables as values. This dictionary has to provide values for all variables of
-            the model except for the deterministic variables.
+            number_samples: Int. Number of samples that need to be samples.
 
             resample: Bool. If false it returns the previously sampled values. It avoids that the parents of a variable
             are sampled multiple times.
 
             observed: Bool. It specifies if the sample should be formatted as observed data or Bayesian parameter.
 
-            input_values: Dictionary(Variable: torch.Tensor).  dictionary of values of the parents. It is used for
-            conditioning the sample on the (inputed) values of some of the parents.
+            input_values: Dictionary(brancher.Variable: torch.Tensor, numeric, or np.ndarray).  dictionary of values of
+            the parents. It is used for conditioning the sample on the (inputed) values of some of the parents.
+
+            differentiable: Bool. Unused.
 
         Returns:
-            Dictionary(Variable: torch.Tensor). A dictionary of samples from the variable and all its parents.
-
+            Dictionary(brancher.Variable: torch.Tensor). A dictionary of samples from the variable and all its parents.
         """
         if self.samples is not None and not resample:
             return {self: self.samples[-1]}
@@ -577,8 +798,7 @@ class RandomVariable(Variable):
             data: torch.Tensor, numeric, or np.ndarray. Input observed data.
 
         Returns:
-            None
-
+            None.
         """
         data = pandas_frame2value(data, self.name)
         if isinstance(data, RandomVariable):
@@ -594,10 +814,10 @@ class RandomVariable(Variable):
         Method. It marks a variable as not observed and it drops the dataset.
 
         Args:
-            None
+            None.
 
         Returns:
-            None
+            None.
         """
         self._observed = False
         self.has_observed_value = False
@@ -609,6 +829,12 @@ class RandomVariable(Variable):
         """
         Method. It resets the evaluated flag of the variable and all its parents. Used after computing the
         log probability of a variable.
+
+        Args:
+            recursive. Bool. If True, all ancestors are also reset.
+
+        Returns:
+            None.
         """
         self.samples = None
         self._evaluated = False
@@ -618,6 +844,15 @@ class RandomVariable(Variable):
                 var._evaluated = False
 
     def _flatten(self):
+        """
+        Method. It returns a sorted list of ancestors of this variable.
+
+        Args:
+            None.
+
+        Returns:
+            List.
+        """
         variables = list(self.ancestors) + [self]
         return sorted(variables, key=lambda v: v.name)
 
@@ -648,20 +883,40 @@ class ProbabilisticModel(BrancherClass):
         """
         Method.
 
-        Args: None
+        Args:
+            None.
 
-        Returns: String
+        Returns:
+            String.
         """
         return self.model_summary.__str__()
 
     @staticmethod
     def _validate_variables(variables):
+        """
+        Static private method. Checks if all variables are either RootVariables, RandomVariables or ProbabilisticModels.
+
+        Args:
+            variables: List(brancher.Variable)
+
+        Returns:
+            List(brancher.Variable)
+        """
         for var in variables:
             if not isinstance(var, (RootVariable, RandomVariable, ProbabilisticModel)):
                 raise ValueError("Invalid input type: {}".format(type(var)))
         return variables
 
     def _set_summary(self):
+        """
+        Private method. Sets the summary of this probabilistic model as a pandas dataframe with the Distribution name
+        and parent variables for each variable of the Probabilistic Model and whether that variable is observed.
+
+        Args: None.
+
+        Returns:
+            None.
+        """
         feature_list = ["Distribution", "Parents", "Observed"]
         var_list = self.flatten()
         var_names = [var.name for var in var_list]
@@ -671,14 +926,40 @@ class ProbabilisticModel(BrancherClass):
 
     @property
     def model_summary(self):
+        """
+        Method. Updates and returns model summary.
+
+        Args: None.
+
+        Returns:
+            pandas.Dataframe. Pandas dataframe containing for each variable in this model the distribution name, parents
+            and if it is observed.
+        """
         self._set_summary()
         return self._model_summary
 
     @property
     def is_observed(self):
+        """
+        Method. It returns whether variable is observed or not.
+
+        Args: None.
+
+        Returns:
+            Bool.
+        """
         return all([var.is_observed for var in self._flatten()])
 
     def observe(self, data):
+        """
+        Method. It assigns an observed value to a RandomVariable.
+
+        Args:
+            data: torch.Tensor, numeric, or np.ndarray. Input observed data.
+
+        Returns:
+            None.
+        """
         if isinstance(data, pd.DataFrame):
             data = {var_name: pandas_frame2value(data, index=var_name) for var_name in data}
         if isinstance(data, dict):
@@ -695,12 +976,29 @@ class ProbabilisticModel(BrancherClass):
     def update_observed_submodel(self):
         """
         Method. Extract the sub-model of observed variables.
+
+        Args: None.
+
+        Returns:
+            None.
         """
         flattened_model = self._flatten()
         observed_variables = [var for var in flattened_model if var.is_observed]
         self.observed_submodel = ProbabilisticModel(observed_variables)
 
     def set_posterior_model(self, model, sampler=None): #TODO: Clean up code duplication
+        """
+        Method. Sets the posterior model for this model. This model will be used by some functions to sample the
+        variable parameters before sampling those variables. The optional sampler is not used yet.
+
+        Args:
+            model: brancher.ProbabilisticModel. The probabilistic model that will be set for this model.
+
+            sampler: brancher.ProbabilisticModel, brancher.Variable, or
+                Iterable(brancher.Variable or brancher.ProbabilisticModel). Unused.
+
+        Returns: None
+        """
         self.posterior_model = PosteriorModel(posterior_model=model, joint_model=self)
         if sampler:
             if isinstance(sampler, ProbabilisticModel):
@@ -713,11 +1011,28 @@ class ProbabilisticModel(BrancherClass):
                                           if isinstance(var, Variable) else PosteriorModel(var, joint_model=self)
                                           for var in sampler]
             else:
-                raise ValueError("The sampler should be ither a probabilistic model, a brancher variable or an iterable of variables and/or models")
+                raise ValueError("The sampler should be either a probabilistic model, a brancher variable or an iterable of variables and/or models")
 
     def calculate_log_probability(self, rv_values, for_gradient=False, normalized=True):
         """
-        Summary
+        Method. It returns the log probability of the values given the model. This is calculated by summing all log
+        probabilities of each variable in the model.
+
+        Args:
+            rv_values: Dictionary(brancher.Variable: torch.Tensor, numeric, np.ndarray or dict). A dictionary having
+            the brancher.Variables of the model as keys and torch.Tensor number or np.array as values. This dictionary
+            has to provide values for all variables of the model except for the deterministic variables.
+
+            reevaluate: Bool. If false it returns the output of the latest call. It avoid unnecessary computations when
+            multiple children variables ask for the log probability of the same parent variable.
+
+            for_gradient: Bool. unused
+
+            normilized: Bool. unused
+
+        Returns:
+            torch.Tensor. The log probability of the input values given the model.
+
         """
         log_probability = sum([var.calculate_log_probability(rv_values, reevaluate=False,
                                                              for_gradient=for_gradient,
@@ -727,11 +1042,40 @@ class ProbabilisticModel(BrancherClass):
         return log_probability
 
     def _get_statistic(self, query, input_values):
+        """
+        Private method. It returns a statistical value of the distributions of all variables in the model given a query
+        and optional conditioning parameters.
+
+        Args:
+            query: Function. A function that has as input a distribution with its parameters and as output torch.Tensor.
+            See distribution package for more details.
+
+            input_values: Dictionary(brancher.Variable: torch.Tensor, numeric, np.ndarray).
+
+        Returns:
+            Dictionary(brancher.Variable, torch.Tensor).
+        """
         return {var: var._get_statistic(query, input_values) for var in self.variables}
 
     def _get_sample(self, number_samples, observed=False, input_values={}, differentiable=True):
         """
-        Summary
+        Private method. Used internally. It returns a joint sample from all variables in the model.
+
+        Args:
+            number_samples: Int. Number of samples that need to be samples.
+
+            resample: Bool. If false it returns the previously sampled values. It avoids that the parents of a variable
+            are sampled multiple times.
+
+            observed: Bool. It specifies if the sample should be formatted as observed data or Bayesian parameter.
+
+            input_values: Dictionary(brancher.Variable: torch.Tensor, numeric, or np.ndarray).  dictionary of values of
+            the parents. It is used for conditioning the sample on the (inputed) values of some of the parents.
+
+            differentiable: Bool. Unused.
+
+        Returns:
+            Dictionary(brancher.Variable: torch.Tensor). A dictionary of samples from the variable and all its parents.
         """
         joint_sample = join_dicts_list([var._get_sample(number_samples=number_samples, resample=False,
                                                         observed=observed, input_values=input_values,
@@ -742,6 +1086,19 @@ class ProbabilisticModel(BrancherClass):
         return joint_sample
 
     def _get_entropy(self, input_values={}, for_gradient=True):
+        """
+        Private method. Calculates the entropy of the model optionally conditioned on input values. If the model is not
+        transformed we take the sum of the entropy for each variable in the model. Else we calculate it with the
+        negative log probability.
+
+        Args:
+            input_values: pandas.Dataframe or Dictionary(brancher.Variable: torch.Tensor, numeric, np.ndarray).
+
+            for_gradient: Bool. Unused.
+
+        Returns:
+            torch.Tensor.
+        """
         if not self.is_transformed:
             entropy_array = {var: var._get_entropy(input_values) for var in self.variables}
             return sum([sum_from_dim(var_ent, 2) for var_ent in entropy_array.values()])
@@ -749,6 +1106,20 @@ class ProbabilisticModel(BrancherClass):
             return -self.calculate_log_probability(input_values, for_gradient=for_gradient)
 
     def get_sample(self, number_samples, input_values={}):
+        """
+        Method. It returns a user specified number of samples optionally conditioned on input values. The function
+        samples all variables in the model.
+
+        Args:
+            number_samples: Int. Number of samples that need to be generated.
+
+            input_values: pandas.Dataframe or Dictionary(brancher.Variable: torch.Tensor, numeric, np.ndarray). A
+            dictionary having the brancher.Variables of the model as keys and torch.Tensor, np.array or numberic values.
+            This dictionary provides the values of variables to condition on.
+
+        Returns:
+            pandas.Dataframe. A pandas dataframe with a row for each sample and column for each variable in the model.
+        """
         reformatted_input_values = reformat_sampler_input(pandas_frame2dict(input_values),
                                                                             number_samples=number_samples)
         raw_sample = self._get_sample(number_samples, observed=False, input_values=reformatted_input_values,
@@ -757,6 +1128,18 @@ class ProbabilisticModel(BrancherClass):
         return sample
 
     def get_mean(self, input_values={}):
+        """
+        Method. It returns the mean value of each variable in the model optionally conditioned on input values of
+        variables. The function returns the variance for each variable in the model.
+
+        Args:
+            input_values: pandas.Dataframe or Dictionary(brancher.Variable: torch.Tensor, numeric, np.ndarray). A
+            dictionary having the brancher.Variables of the model as keys and torch.Tensor, np.array or numberic values.
+            This dictionary provides the values of variables to condition on.
+
+        Returns:
+            pandas.Dataframe. A pandas dataframe with the mean or each variable
+        """
         reformatted_input_values = reformat_sampler_input(pandas_frame2dict(input_values),
                                                           number_samples=1)
         raw_mean = self._get_mean(reformatted_input_values)
@@ -764,6 +1147,18 @@ class ProbabilisticModel(BrancherClass):
         return mean
 
     def get_variance(self, input_values={}):
+        """
+        Method. It returns the variance value of each variable in the model optionally conditioned on input values of
+        variables. The function returns the variance for each variable in the model.
+
+        Args:
+            input_values: pandas.Dataframe or Dictionary(brancher.Variable: torch.Tensor, numeric, np.ndarray). A
+            dictionary having the brancher.Variables of the model as keys and torch.Tensor, np.array or numberic values.
+            This dictionary provides the values of variables to condition on.
+
+        Returns:
+            pandas.Dataframe. A pandas dataframe with the variance of each variable
+        """
         reformatted_input_values = reformat_sampler_input(pandas_frame2dict(input_values),
                                                           number_samples=1)
         raw_variance = self._get_variance(reformatted_input_values)
@@ -771,6 +1166,18 @@ class ProbabilisticModel(BrancherClass):
         return variance
 
     def get_entropy(self, input_values={}):
+        """
+        Method. It returns the entropy of the model optionally conditioned on input values of variables. The
+        function returns the sum of the entropy of the variables in the model.
+
+        Args:
+            input_values: pandas.Dataframe or Dictionary(brancher.Variable: torch.Tensor, numeric, np.ndarray). A
+            dictionary having the brancher.Variables of the model as keys and torch.Tensor, np.array or numberic values.
+            This dictionary provides the values of variables to condition on.
+
+        Returns:
+            pandas.Dataframe. A pandas dataframe with the entropy of each variable
+        """
         reformatted_input_values = reformat_sampler_input(pandas_frame2dict(input_values),
                                                           number_samples=1)
         raw_ent = self._get_entropy(reformatted_input_values)
@@ -779,7 +1186,7 @@ class ProbabilisticModel(BrancherClass):
 
     def check_posterior_model(self):
         """
-        Summary
+        Method. Raises an error if the posterior model is not set.
         """
         if not self.posterior_model:
             raise AttributeError("The posterior model has not been initialized.")
@@ -908,6 +1315,16 @@ class PosteriorModel(ProbabilisticModel):
 
 
 def var2link(var):
+    """
+    Function. Constructs a partialLink from variables, numbers, numpy arrays, tensors or a combination of variables and
+    partialLinks.
+
+    Args:
+        var: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of brancher.Variables and
+        brancher.PartialLinks.
+
+    Retuns: brancher.PartialLink
+    """
     if isinstance(var, Variable):
         vars = {var}
         fn = lambda values: values[var]
@@ -923,7 +1340,13 @@ def var2link(var):
 
 
 class Ensemble(BrancherClass):
+    """
+    Ensembles are collections of models. Each model can have a weight and models can share variables.
 
+    Parameters
+    ----------
+    model_list: Iterable(brancher.ProbabilisticModel). A collection of ProbabilisticModels.
+    """
     def __init__(self, model_list, weights=None):
         #TODO: assert that all variables have the same name
         self.num_models = len(model_list)
