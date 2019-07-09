@@ -25,6 +25,16 @@ class StochasticProcess(ABC):
     def __call__(self, query_points):
         pass
 
+    def _get_sample(self, number_samples, query_points, input_values={}):
+        multivariate_variable = self(query_points)
+        return multivariate_variable._get_sample(number_samples=number_samples,
+                                                 input_values=input_values)
+
+    def get_sample(self, number_samples, query_points, input_values={}):
+        multivariate_variable = self(query_points)
+        return multivariate_variable.get_sample(number_samples=number_samples,
+                                                input_values=input_values)
+
 
 ## Gaussian processes ##
 class GaussianProcess(StochasticProcess):
