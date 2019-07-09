@@ -1,8 +1,9 @@
 import numpy as np
 
 from brancher.standard_variables import DirichletVariable, GeometricVariable, Chi2Variable, \
-    GumbelVariable, HalfCauchyVariable, HalfNormalVariable, NegativeBinomialVariable, PoissonVariable, StudentTVariable, UniformVariable
+    GumbelVariable, HalfCauchyVariable, HalfNormalVariable, NegativeBinomialVariable, PoissonVariable, StudentTVariable, UniformVariable, BernoulliVariable
 
+## Distributions and samples ##
 a = DirichletVariable(concentration=np.ones((10, 10)), name="a")
 print(a.get_sample(2))
 
@@ -35,3 +36,14 @@ print(j.get_sample(2))
 
 l = UniformVariable(1, 2, name="l")
 print(l.get_sample(2))
+
+m = BernoulliVariable(probs=0.5, name="m")
+print(m.get_sample(2))
+
+## Moments ##
+print("Moments :", m.distribution.get_moments(0.1, 5, **{"probs": 0.1}))
+
+
+## Taylor ##
+#print("Taylor :", m.distribution.get_log_p_taylor_expansion(0, 5, **{"probs": 0.1}))
+

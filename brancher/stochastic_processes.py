@@ -9,7 +9,8 @@ import operator
 
 import numpy as np
 
-from brancher.variables import Variable, PartialLink
+from brancher.variables import Variable, PartialLink, ProbabilisticModel
+from brancher.time_series_models import TimeSeriesModel
 from brancher.standard_variables import MultivariateNormalVariable
 from brancher.standard_variables import var2link
 import brancher.functions as BF
@@ -171,3 +172,29 @@ class ConstantMean(MeanFunction):
         value = value
         mean = lambda x: BF.delta(x, x)*value
         super().__init__(mean=mean)
+
+
+## Autoregressive processes ##
+
+class MarkovProcess(StochasticProcess):
+
+    def __init__(self, initial_value, cond_dist):
+        self.initial_value = initial_value
+        self.cond_dist = cond_dist
+
+    def __call__(self, query_points):
+        assert isinstance(query_points, (int, range)), "The input query_points of a Markov process should be either an integer (time horizon) or a range"
+        if isinstance(query_points, int):
+            time_range = range(0, query_points)
+        else:
+            time_range = query_points
+        variables = [self.initial_value]
+        for t in time_range:
+            if t > 0:
+                new_variable = self.cond_dist(variables[-1])
+                new_variable.name = new_variable.name + "_" + str(t)
+                variables.append(new_variable)
+        return TimeSeriesModel(variables, time_range)
+
+
+

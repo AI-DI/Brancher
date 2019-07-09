@@ -2,7 +2,8 @@
 Variables
 ---------
 The variables module contains base classes for defining random and deterministic variables and the operations that can
-be done on these variables. It also contains the base classes of probabilistic models which contain random variables.
+be done on these variables. It also contains the base classes of probabilistic models which is a collection of
+deterministic and random variables.
 """
 from abc import ABC, abstractmethod
 import operator
