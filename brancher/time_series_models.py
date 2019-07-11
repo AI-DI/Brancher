@@ -22,16 +22,19 @@ class TimeSeriesModel(ProbabilisticModel):
         var_index = self.temporal_variables.index(var)
         return self.time_stamps[var_index]
 
-    def get_sample(self, number_samples, input_values={}):
+    def get_timeseries_sample(self, number_samples, input_values={}, mode="prior"):
+        if mode == "prior":
+            sampler = self._get_sample
+        elif mode == "posterior":
+            sampler = self._get_posterior_sample
+        else:
+            raise ValueError("the mode of the sampler should be either the 'prior' or 'posterior' string")
+
         reformatted_input_values = reformat_sampler_input(pandas_frame2dict(input_values),
                                                           number_samples=number_samples)
-        raw_sample = self._get_sample(number_samples, observed=False, input_values=reformatted_input_values,
-                                      differentiable=False)
+        raw_sample = sampler(number_samples, input_values=reformatted_input_values)
         temporal_raw_sample = {var: (self._get_time_stamp(var), value)
                                for var, value in raw_sample.items() if var in self.temporal_variables}
         temporal_sample = reformat_temporal_sample_to_pandas_timeseries(temporal_raw_sample)
         return temporal_sample
-
-    def plot_sampled_timeseries(self, number_samples, input_values={}):
-        pass #TODO: work in progress
 

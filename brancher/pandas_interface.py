@@ -20,6 +20,13 @@ def pandas_frame2dict(dataframe):
         raise ValueError("The input should be either a dictionary or a Pandas dataframe")
 
 
+def pandas_frame2timeseries_data(dataframe):
+    if isinstance(dataframe, pd.core.frame.DataFrame):
+        return [d for d in dataframe.values]
+    else:
+        return dataframe
+
+
 def pandas_frame2value(dataframe, index):
     if isinstance(dataframe, pd.core.frame.DataFrame):
         values = np.array([np.ndarray.tolist(x) if isinstance(x, np.ndarray) else x
