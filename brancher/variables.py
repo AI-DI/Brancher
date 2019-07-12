@@ -237,7 +237,7 @@ class Variable(BrancherClass):
         reformatted_input_values = reformat_sampler_input(pandas_frame2dict(input_values),
                                                           number_samples=1)
         raw_mean = {self: self._get_mean(reformatted_input_values)}
-        mean = reformat_sample_to_pandas(raw_mean, number_samples=1)
+        mean = reformat_sample_to_pandas(raw_mean)
         return mean
 
     def get_variance(self, input_values={}):
@@ -256,7 +256,7 @@ class Variable(BrancherClass):
         reformatted_input_values = reformat_sampler_input(pandas_frame2dict(input_values),
                                                           number_samples=1)
         raw_variance = {self: self._get_variance(reformatted_input_values)}
-        variance = reformat_sample_to_pandas(raw_variance, number_samples=1)
+        variance = reformat_sample_to_pandas(raw_variance)
         return variance
 
     def get_entropy(self, input_values={}):
@@ -275,7 +275,7 @@ class Variable(BrancherClass):
         reformatted_input_values = reformat_sampler_input(pandas_frame2dict(input_values),
                                                           number_samples=1)
         raw_ent = {self: self._get_entropy(reformatted_input_values)}
-        ent = reformat_sample_to_pandas(raw_ent, number_samples=1)
+        ent = reformat_sample_to_pandas(raw_ent)
         return ent
 
     @abstractmethod
@@ -301,6 +301,17 @@ class Variable(BrancherClass):
         Returns: Bool.
         """
         pass
+
+    @property
+    def is_latent(self):
+        """
+        Property method. It returns True if the variable is not observed and it does not have any observed ancestors.
+
+        Args: None.
+
+        Returns: Bool.
+        """
+        return not self.is_observed and all([not a.is_observed for a in self.ancestors])
 
     def __str__(self):
         """
@@ -872,6 +883,7 @@ class ProbabilisticModel(BrancherClass):
         self.posterior_model = None
         self.posterior_sampler = None
         self.observed_submodel = None
+        self.latent_submodel = None
         self.is_transformed = False
         self.diagnostics = {}
         self._fully_observed = is_fully_observed
@@ -890,9 +902,13 @@ class ProbabilisticModel(BrancherClass):
         self._input_variables = self._validate_variables(variables)
         self._set_summary()
         self.variables = self.flatten()
+        if not all([var.is_latent for var in self._input_variables]):
+            self.update_latent_submodel()
+        else: #This is required to avoid an infinite recursion
+            self.latent_submodel = self
         if not all([var.is_observed for var in self._input_variables]):
             self.update_observed_submodel()
-        else:
+        else: #This is required to avoid an infinite recursion
             self.observed_submodel = self
 
     def add_variables(self, new_variables):
@@ -1015,6 +1031,8 @@ class ProbabilisticModel(BrancherClass):
         for var in data_dict:
             if isinstance(var, RandomVariable):
                 var.observe(data_dict[var])
+        self.update_observed_submodel()
+        self.update_latent_submodel()
 
     def update_observed_submodel(self):
         """
@@ -1028,6 +1046,12 @@ class ProbabilisticModel(BrancherClass):
         flattened_model = self._flatten()
         observed_variables = [var for var in flattened_model if var.is_observed]
         self.observed_submodel = ProbabilisticModel(observed_variables, is_fully_observed=True)
+
+    def update_latent_submodel(self):
+        flattened_model = self._flatten()
+        latent_variables = [var for var in flattened_model
+                            if var.is_latent]
+        self.latent_submodel = ProbabilisticModel(latent_variables)
 
     def set_posterior_model(self, model, sampler=None): #TODO: Clean up code duplication
         """
@@ -1333,6 +1357,9 @@ class ProbabilisticModel(BrancherClass):
             return [var for var in sorted_variables if var.is_observed]
         else:
             return sorted_variables
+
+#    def copy(self):
+#        pass
 
 
 class PosteriorModel(ProbabilisticModel):

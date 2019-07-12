@@ -1,4 +1,5 @@
 import numbers
+from abc import ABC, abstractmethod
 
 import numpy as np
 import torch.nn as nn
@@ -9,6 +10,13 @@ import brancher.geometric_ranges as geometric_ranges
 from brancher.variables import var2link, Variable, RootVariable, RandomVariable, PartialLink
 from brancher.utilities import join_sets_list
 
+
+## Stochastic process base class ##
+class Process(ABC):
+
+    @abstractmethod
+    def attach_observation_model(self, observation_cond_dist):
+        pass
 
 
 class LinkConstructor(nn.ModuleList):
@@ -36,12 +44,21 @@ class VariableConstructor(RandomVariable):
     Parameters
     ----------
     """
-    def __init__(self, name, learnable, ranges, is_observed=False, **kwargs): #TODO: code duplication here
+    def __new__(cls, *args, **kwargs): #TODO: This requires proper documentation
+        var = super(VariableConstructor, cls).__new__(cls)
+        var.__init__(*args, **kwargs)
+        return var._construct_variable_or_process()
+
+
+    def __init__(self, name, learnable, ranges, is_observed=False, **kwargs):
+        self._input = kwargs
         self.name = name
         self._evaluated = False
         self._observed = is_observed
         self._observed_value = None
         self._current_value = None
+        if self._check_for_stochastic_process_arguments():
+            return
         self.construct_deterministic_parents(learnable, ranges, kwargs)
         self.parents = join_sets_list([var2link(x).vars for x in kwargs.values()])
         self.ancestors = join_sets_list([self.parents] + [parent.ancestors for parent in self.parents])
@@ -66,6 +83,28 @@ class VariableConstructor(RandomVariable):
                 deterministic_parent = RootVariable(ranges[parameter_name].inverse_transform(value, dim),
                                                     self.name + "_" + parameter_name, learnable, is_observed=self._observed)
                 kwargs.update({parameter_name: ranges[parameter_name].forward_transform(deterministic_parent, dim)})
+
+    def _check_for_stochastic_process_arguments(self):
+        params = self._input
+        process_params = [key for key, argument in params.items()
+                          if isinstance(argument, Process)]
+        if len(process_params) > 1:
+            raise ValueError("A random variable can only have one stochastic process as input parameter")
+        return len(process_params) == 1
+
+    def _construct_variable_or_process(self):
+        if self._check_for_stochastic_process_arguments():
+            params = self._input
+            process_params = [key for key, argument in params.items()
+                              if isinstance(argument, Process)]
+            param_name = process_params[0]
+            process = params.pop(param_name)
+            variable_constructor = self.__class__
+            observation_cond_dist = lambda x: variable_constructor(**{**params, **{param_name: x}}, name=self.name)
+            process.attach_observation_model(observation_cond_dist)
+            return process
+        else:
+            return self
 
 
 class EmpiricalVariable(VariableConstructor):

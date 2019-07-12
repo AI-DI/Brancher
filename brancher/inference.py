@@ -4,6 +4,7 @@ Inference
 Module description
 """
 import warnings
+import copy
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 
@@ -143,6 +144,16 @@ class ReverseKL(InferenceMethod):
 
     def post_process(self, joint_model):
         pass
+
+    def construct_posterior_model(self, joint_model):
+        joint_model.update_latent_submodel()
+        latent_names = [var.name for var in joint_model.variables if not var.is_observed]
+        latent_submodel_names = [var.name for var in joint_model.latent_submodel.variables]
+        if set(latent_names) == set(latent_submodel_names):
+            #return copy.deepcopy(joint_model.latent_submodel) #TODO work in progress
+            raise NotImplementedError("The automatric construction of the variational posterior is not currently implemented.")
+        else:
+            raise ValueError("The variational model cannot be constructed automatically as the latent submodel does not contains all the variables")
 
 
 class WassersteinVariationalGradientDescent(InferenceMethod):

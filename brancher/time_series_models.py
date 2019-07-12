@@ -38,3 +38,12 @@ class TimeSeriesModel(ProbabilisticModel):
         temporal_sample = reformat_temporal_sample_to_pandas_timeseries(temporal_raw_sample)
         return temporal_sample
 
+
+class LatentTimeSeriesModel(TimeSeriesModel):
+
+    def __init__(self, temporal_variables, observation_variables, time_stamps):
+        assert isinstance(observation_variables, list) and all([isinstance(var, Variable) for var in
+                                                                temporal_variables]), "The input observation_variable should be a list of Brancher variables"
+        self.observation_variables = observation_variables
+        super().__init__(temporal_variables, time_stamps)
+

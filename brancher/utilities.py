@@ -356,3 +356,35 @@ def get_tensor_data(tensor):
 
 def delta(x, y):
     return (x == y).float()
+
+
+# def is_integer_string(string, signed=True):
+#     digits = {str(digit) for digit in set(range(10))}
+#     if signed and (string[0] == "+" or string[0] == "-"):
+#         string = string[1:]
+#     return set(string).issubset(digits)
+#
+#
+# def is_number_string(string):
+#     special_count = max(string.count("."), string.count("e"))
+#     if not (0 <= special_count < 2):
+#         return False
+#     digits = {str(digit) for digit in set(range(10))}
+#     digits.add(".")
+#     mantissa, exponent = string.split("e")
+#     if not is_integer_string(exponent):
+#         return False
+#     else:
+#         integer, decimals = mantissa.split(".")
+#         return is_integer_string(integer) and is_integer_string(decimals, signed=False)
+
+
+def get_numerical_index_from_string(string):
+    try:
+        if not string:
+            return string
+        else:
+            float(string)
+            return string
+    except ValueError:
+        return get_numerical_index_from_string(string[1:])
