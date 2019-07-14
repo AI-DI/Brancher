@@ -9,35 +9,128 @@ import operator
 
 import numpy as np
 
-from brancher.variables import Variable, PartialLink
-from brancher.standard_variables import MultivariateNormalVariable
+from brancher.variables import Variable, PartialLink, ProbabilisticModel
+from brancher.time_series_models import TimeSeriesModel, LatentTimeSeriesModel
+from brancher.standard_variables import MultivariateNormalVariable, DeterministicVariable
 from brancher.standard_variables import var2link
+from brancher.standard_variables import Process
 import brancher.functions as BF
-from brancher.utilities import coerce_to_dtype
+from brancher.utilities import get_numerical_index_from_string
+
+from brancher.pandas_interface import pandas_frame2timeseries_data
 
 import torch
 
 
-class StochasticProcess(ABC):
+class StochasticProcess(Process):
+
+    def __init__(self):
+        self.has_observation_model = False
+        self.observation_cond_dist = None
+        self.active_submodel = None
+
+    def __call__(self, query_points): #This creates a finite-dimensional instance of the process
+        instance = self.get_joint_instance(query_points)
+        if self.has_observation_model:
+            instance = self._apply_observation_model(instance)
+        if isinstance(instance, ProbabilisticModel) and self.has_posterior_instance:
+            instance.set_posterior_model(self.active_submodel.posterior_model)
+            if self.active_submodel.observed_submodel is not None:
+                observed_variables = [DeterministicVariable(value=var._observed_value[:, 0, :],
+                                                            name=var.name, is_observed=True)
+                                      for var in self.active_submodel.observed_submodel.variables] #TODO: Work in progress with observed variables
+                instance.posterior_model.add_variables(observed_variables)
+        return instance
+
+    def attach_observation_model(self, observation_cond_dist):
+        self.observation_cond_dist = observation_cond_dist
+        self.has_observation_model = True
+
+    def _apply_observation_model(self, instance): #TODO work in progress
+        assert self.has_observation_model, "The observation model has not been initialized"
+        if isinstance(instance, Variable):
+            observation_variable = self.observation_cond_dist(instance)
+            model = self._construct_observed_model(observation_variable, instance)
+        else:
+            observation_variables = []
+            for var in instance._input_variables:
+                obs_var = self.observation_cond_dist(var)
+                obs_var.name = obs_var.name + "_" + get_numerical_index_from_string(var.name)
+                observation_variables.append(obs_var)
+            model = self._construct_observed_model(observation_variables, instance)
+        return model
 
     @abstractmethod
-    def __call__(self, query_points):
+    def _construct_observed_model(self, observation_variables, instance):
         pass
+
+    @abstractmethod
+    def observe(self, data, query_points):
+        pass
+
+    def unobserve(self):
+        if self.active_submodel is not None:
+            [var.unobserve() for var in self.active_submodel]
+
+    @property
+    def has_posterior_instance(self):
+        return self.active_submodel is not None and self.active_submodel.posterior_model is not None
+
+    def _assert_posterior_instance(self):
+        assert self.has_posterior_instance, "Posterior samples can only be obtained after performing inference"
+
+    @abstractmethod
+    def get_joint_instance(self, query_points):
+        pass
+
+    def _get_sample(self, number_samples, query_points, input_values={}):
+        multivariate_variable = self(query_points)
+        return multivariate_variable._get_sample(number_samples=number_samples,
+                                                 input_values=input_values)
+
+    def get_sample(self, number_samples, query_points, input_values={}):
+        multivariate_variable = self(query_points)
+        return multivariate_variable.get_sample(number_samples=number_samples,
+                                                input_values=input_values)
+
+    def _get_posterior_sample(self, number_samples, query_points, input_values={}):
+        self._assert_posterior_instance()
+        multivariate_variable = self(query_points)
+        return multivariate_variable._get_posterior_sample(number_samples=number_samples,
+                                                           input_values=input_values)
+
+    def get_posterior_sample(self, number_samples, query_points, input_values={}):
+        self._assert_posterior_instance()
+        multivariate_variable = self(query_points)
+        return multivariate_variable.get_posterior_sample(number_samples=number_samples,
+                                                          input_values=input_values)
+
+## Processes types ##
+class ContinuousStochasticProcess(StochasticProcess):
+    pass
+
+
+class DiscreteStochasticProcess(StochasticProcess):
+    pass
 
 
 ## Gaussian processes ##
-class GaussianProcess(StochasticProcess):
+class GaussianProcess(ContinuousStochasticProcess):
 
     def __init__(self, mean_function, covariance_function, name):
         self.mean_function = mean_function
         self.covariance_function = covariance_function
         self.name = name
+        super().__init__()
 
-    def __call__(self, query_points):
+    def get_joint_instance(self, query_points):
         x = var2link(query_points)
         return MultivariateNormalVariable(loc=self.mean_function(x),
                                           covariance_matrix=self.covariance_function(x),
                                           name=self.name + "(" + query_points.name + ")")
+
+    def _construct_observed_model(self, observation_variables, instance):
+        return ProbabilisticModel(observation_variables)
 
 
 class CovarianceFunction(ABC):
@@ -171,3 +264,69 @@ class ConstantMean(MeanFunction):
         value = value
         mean = lambda x: BF.delta(x, x)*value
         super().__init__(mean=mean)
+
+
+## Discrete timeseries processes ##
+
+class DiscreteTimeSeries(DiscreteStochasticProcess):
+
+    def __init__(self):
+        super().__init__()
+
+    def observe(self, data, query_points):
+        assert len(data) == len(query_points), "The number of datapoints should be equal to the number of query points"
+        data = pandas_frame2timeseries_data(data)
+        self.active_submodel = self(query_points)
+
+        if self.has_observation_model:
+            variables_to_be_observed = self.active_submodel.observation_variables
+        else:
+            variables_to_be_observed = self.active_submodel.temporal_variables
+
+        [var.observe(data_point) for var, data_point in zip(variables_to_be_observed, data)]
+
+    def get_timeseries_sample(self, number_samples, query_points, input_values={}):
+        multivariate_variable = self(query_points)
+        return multivariate_variable.get_timeseries_sample(number_samples=number_samples,
+                                                           input_values=input_values,
+                                                           mode="prior")
+
+    def get_posterior_timeseries_sample(self, number_samples, query_points, input_values={}):
+        self._assert_posterior_instance()
+        multivariate_variable = self(query_points)
+        return multivariate_variable.get_timeseries_sample(number_samples=number_samples,
+                                                           input_values=input_values,
+                                                           mode="posterior")
+
+    def _construct_observed_model(self, observation_variables, instance):
+        return LatentTimeSeriesModel(temporal_variables=instance.temporal_variables,
+                                     observation_variables=observation_variables,
+                                     time_stamps=instance.time_stamps)
+
+
+class MarkovProcess(DiscreteTimeSeries):
+
+    def __init__(self, initial_values, cond_dist):
+        self.number_past_time_steps = cond_dist.__code__.co_argcount
+        if isinstance(initial_values, Variable):
+            assert self.number_past_time_steps == 1, "The conditional distribution cond_dist should have a single argument since a single initial_value was given"
+            initial_values = tuple([initial_values])
+        assert self.number_past_time_steps == len(initial_values), "The initial value should be a tuple of variables with as many entries as the number of arguments in the conditional distribution"
+        self.initial_value = initial_values
+        self.cond_dist = cond_dist
+        super().__init__()
+
+    def get_joint_instance(self, query_points):
+        assert isinstance(query_points, (int, range)), "The input query_points of a Markov process should be either an integer (time horizon) or a range"
+        if isinstance(query_points, int):
+            time_range = range(0, query_points)
+        else:
+            time_range = query_points
+        variables = list(self.initial_value)
+        for t in time_range:
+            if t >  self.number_past_time_steps - 1:
+                new_variable = self.cond_dist(*(variables[-self.number_past_time_steps:-1] + [variables[-1]]))
+                new_variable.name = new_variable.name + "_" + str(t)
+                variables.append(new_variable)
+        return TimeSeriesModel(variables, time_range)
+

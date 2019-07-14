@@ -2,7 +2,8 @@
 Variables
 ---------
 The variables module contains base classes for defining random and deterministic variables and the operations that can
-be done on these variables. It also contains the base classes of probabilistic models which contain random variables.
+be done on these variables. It also contains the base classes of probabilistic models which is a collection of
+deterministic and random variables.
 """
 from abc import ABC, abstractmethod
 import operator
@@ -236,7 +237,7 @@ class Variable(BrancherClass):
         reformatted_input_values = reformat_sampler_input(pandas_frame2dict(input_values),
                                                           number_samples=1)
         raw_mean = {self: self._get_mean(reformatted_input_values)}
-        mean = reformat_sample_to_pandas(raw_mean, number_samples=1)
+        mean = reformat_sample_to_pandas(raw_mean)
         return mean
 
     def get_variance(self, input_values={}):
@@ -255,7 +256,7 @@ class Variable(BrancherClass):
         reformatted_input_values = reformat_sampler_input(pandas_frame2dict(input_values),
                                                           number_samples=1)
         raw_variance = {self: self._get_variance(reformatted_input_values)}
-        variance = reformat_sample_to_pandas(raw_variance, number_samples=1)
+        variance = reformat_sample_to_pandas(raw_variance)
         return variance
 
     def get_entropy(self, input_values={}):
@@ -274,7 +275,7 @@ class Variable(BrancherClass):
         reformatted_input_values = reformat_sampler_input(pandas_frame2dict(input_values),
                                                           number_samples=1)
         raw_ent = {self: self._get_entropy(reformatted_input_values)}
-        ent = reformat_sample_to_pandas(raw_ent, number_samples=1)
+        ent = reformat_sample_to_pandas(raw_ent)
         return ent
 
     @abstractmethod
@@ -300,6 +301,17 @@ class Variable(BrancherClass):
         Returns: Bool.
         """
         pass
+
+    @property
+    def is_latent(self):
+        """
+        Property method. It returns True if the variable is not observed and it does not have any observed ancestors.
+
+        Args: None.
+
+        Returns: Bool.
+        """
+        return not self.is_observed and all([not a.is_observed for a in self.ancestors])
 
     def __str__(self):
         """
@@ -505,7 +517,7 @@ class RootVariable(Variable):
         statistic = query(self.distribution, parameters_dict)
         return statistic
 
-    def _get_sample(self, number_samples, resample=False, observed=False, input_values={}, differentiable=True):
+    def _get_sample(self, number_samples, resample=False, observed=None, input_values={}, differentiable=True):
         """                                                                                                             
         Private method. It returns samples from the joint distribution specified by the model. If an input is
         provided it only samples the variables that are not contained in the input.                                     
@@ -745,7 +757,7 @@ class RandomVariable(Variable):
         statistic = query(self.distribution, parameters_dict)
         return statistic
 
-    def _get_sample(self, number_samples=1, resample=True, observed=False, input_values={}, differentiable=True):
+    def _get_sample(self, number_samples=1, resample=True, observed=None, input_values={}, differentiable=True):
         """
         Private method. Used internally. It returns samples from the random variable by sampling all its parents and
         itself.
@@ -766,6 +778,8 @@ class RandomVariable(Variable):
         Returns:
             Dictionary(brancher.Variable: torch.Tensor). A dictionary of samples from the variable and all its parents.
         """
+        if observed is None:
+            observed = False
         if self.samples is not None and not resample:
             return {self: self.samples[-1]}
         if not observed:
@@ -831,7 +845,7 @@ class RandomVariable(Variable):
         log probability of a variable.
 
         Args:
-            recursive. Bool. If True, all ancestors are also reset.
+            recursive: Bool. If True, all ancestors are also reset.
 
         Returns:
             None.
@@ -865,19 +879,57 @@ class ProbabilisticModel(BrancherClass):
     ----------
     variables: List(brancher.Variable). A list of random and deterministic variables.
     """
-    def __init__(self, variables):
-        self._input_variables = self._validate_variables(variables)
-        self._set_summary()
-        self.variables = self.flatten()
+    def __init__(self, variables, is_fully_observed=False):
         self.posterior_model = None
         self.posterior_sampler = None
         self.observed_submodel = None
+        self.latent_submodel = None
         self.is_transformed = False
         self.diagnostics = {}
+        self._fully_observed = is_fully_observed
+        self._initialize_model(variables)
+
+    def _initialize_model(self, variables):
+        """
+        Method. It initializes the probabilistic model.
+
+        Args:
+            variables: List(brancher.Variable). A list of random and deterministic variables.
+
+        Returns:
+            None.
+        """
+        self._input_variables = self._validate_variables(variables)
+        self._set_summary()
+        self.variables = self.flatten()
+        if not all([var.is_latent for var in self._input_variables]):
+            self.update_latent_submodel()
+        else: #This is required to avoid an infinite recursion
+            self.latent_submodel = self
         if not all([var.is_observed for var in self._input_variables]):
             self.update_observed_submodel()
-        else:
+        else: #This is required to avoid an infinite recursion
             self.observed_submodel = self
+
+    def add_variables(self, new_variables):
+        """
+        Method. It adds new variables to an existing model.
+
+        Args:
+            new_variables: brancher.Variable, List(brancher.Variable), Set(brancher.Variable) or brancher.ProbabilisticModel
+
+        Returns:
+            None.
+        """
+        if isinstance(new_variables, ProbabilisticModel):
+            new_variables = new_variables.variables
+        if isinstance(new_variables, (list, set)):
+            new_input_variables = list(self.variables) + list(new_variables)
+        elif isinstance(new_variables, Variable):
+            new_input_variables = list(self.variables).append(Variable)
+        else:
+            raise ValueError("The input of the add_variable method should be a Variable, a set/list of variables or a ProbabilisticModel")
+        self._initialize_model(new_input_variables)
 
     def __str__(self):
         """
@@ -895,6 +947,7 @@ class ProbabilisticModel(BrancherClass):
     def _validate_variables(variables):
         """
         Static private method. Checks if all variables are either RootVariables, RandomVariables or ProbabilisticModels.
+        It also check if all variable names are unique.
 
         Args:
             variables: List(brancher.Variable)
@@ -905,6 +958,9 @@ class ProbabilisticModel(BrancherClass):
         for var in variables:
             if not isinstance(var, (RootVariable, RandomVariable, ProbabilisticModel)):
                 raise ValueError("Invalid input type: {}".format(type(var)))
+        names = [var.name for var in variables]
+        if len(set(names)) != len(names):
+            raise ValueError("The list of variables contains at least two variables with the same name")
         return variables
 
     def _set_summary(self):
@@ -941,18 +997,21 @@ class ProbabilisticModel(BrancherClass):
     @property
     def is_observed(self):
         """
-        Method. It returns whether variable is observed or not.
+        Method. It returns whether the model is fully observed or not.
 
         Args: None.
 
         Returns:
             Bool.
         """
-        return all([var.is_observed for var in self._flatten()])
+        if self._fully_observed:
+            return True
+        else:
+            return any([var.is_observed for var in self._flatten()])
 
     def observe(self, data):
         """
-        Method. It assigns an observed value to a RandomVariable.
+        Method. It assigns an observed value to a ProbabilisticModel.
 
         Args:
             data: torch.Tensor, numeric, or np.ndarray. Input observed data.
@@ -972,6 +1031,8 @@ class ProbabilisticModel(BrancherClass):
         for var in data_dict:
             if isinstance(var, RandomVariable):
                 var.observe(data_dict[var])
+        self.update_observed_submodel()
+        self.update_latent_submodel()
 
     def update_observed_submodel(self):
         """
@@ -984,7 +1045,13 @@ class ProbabilisticModel(BrancherClass):
         """
         flattened_model = self._flatten()
         observed_variables = [var for var in flattened_model if var.is_observed]
-        self.observed_submodel = ProbabilisticModel(observed_variables)
+        self.observed_submodel = ProbabilisticModel(observed_variables, is_fully_observed=True)
+
+    def update_latent_submodel(self):
+        flattened_model = self._flatten()
+        latent_variables = [var for var in flattened_model
+                            if var.is_latent]
+        self.latent_submodel = ProbabilisticModel(latent_variables)
 
     def set_posterior_model(self, model, sampler=None): #TODO: Clean up code duplication
         """
@@ -1057,7 +1124,7 @@ class ProbabilisticModel(BrancherClass):
         """
         return {var: var._get_statistic(query, input_values) for var in self.variables}
 
-    def _get_sample(self, number_samples, observed=False, input_values={}, differentiable=True):
+    def _get_sample(self, number_samples, observed=None, input_values={}, differentiable=True):
         """
         Private method. Used internally. It returns a joint sample from all variables in the model.
 
@@ -1122,7 +1189,7 @@ class ProbabilisticModel(BrancherClass):
         """
         reformatted_input_values = reformat_sampler_input(pandas_frame2dict(input_values),
                                                                             number_samples=number_samples)
-        raw_sample = self._get_sample(number_samples, observed=False, input_values=reformatted_input_values,
+        raw_sample = self._get_sample(number_samples, input_values=reformatted_input_values,
                                       differentiable=False)
         sample = reformat_sample_to_pandas(raw_sample)
         return sample
@@ -1285,7 +1352,14 @@ class ProbabilisticModel(BrancherClass):
 
     def _flatten(self):
         variables = list(join_sets_list([var.ancestors.union({var}) for var in self._input_variables]))
-        return sorted(variables, key=lambda v: v.name)
+        sorted_variables = sorted(variables, key=lambda v: v.name)
+        if self._fully_observed:
+            return [var for var in sorted_variables if var.is_observed]
+        else:
+            return sorted_variables
+
+#    def copy(self):
+#        pass
 
 
 class PosteriorModel(ProbabilisticModel):
@@ -1301,13 +1375,17 @@ class PosteriorModel(ProbabilisticModel):
         super().__init__(posterior_model.variables)
         self.posterior_model = None
         self.model_mapping = get_model_mapping(self, joint_model)
-
         self._is_trained = False
+        self.joint_model = joint_model
+
+    def add_variables(self, new_variables):
+        super().add_variables(new_variables)
+        self.model_mapping = get_model_mapping(self, self.joint_model)
 
     def posterior_sample2joint_sample(self, posterior_sample):
         return reassign_samples(posterior_sample, self.model_mapping)
 
-    def _get_posterior_sample(self, number_samples, observed=False, input_values={}, differentiable=True):
+    def _get_posterior_sample(self, number_samples, observed=None, input_values={}, differentiable=True):
         sample = self.posterior_sample2joint_sample(self._get_sample(number_samples, observed, input_values,
                                                                      differentiable=differentiable))
         sample.update(input_values)
@@ -1356,7 +1434,7 @@ class Ensemble(BrancherClass):
         else:
             self.weights = np.array(weights)
 
-    def _get_sample(self, number_samples, observed=False, input_values={}, differentiable=True):
+    def _get_sample(self, number_samples, observed=None, input_values={}, differentiable=True):
         num_samples_list = np.random.multinomial(number_samples, self.weights)
         samples_list = [model._get_sample(n, differentiable=differentiable)
                         for n, model in zip(num_samples_list, self.model_list)]
@@ -1382,7 +1460,7 @@ class Ensemble(BrancherClass):
     def get_sample(self, number_samples, input_values={}): #TODO: code duplication here
         reformatted_input_values = reformat_sampler_input(pandas_frame2dict(input_values),
                                                                             number_samples=number_samples)
-        raw_sample = self._get_sample(number_samples, observed=False, input_values=reformatted_input_values,
+        raw_sample = self._get_sample(number_samples, observed=None, input_values=reformatted_input_values,
                                       differentiable=False)
         sample = reformat_sample_to_pandas(raw_sample)
         return sample

@@ -4,6 +4,7 @@ Inference
 Module description
 """
 import warnings
+import copy
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 
@@ -14,6 +15,7 @@ import torch
 
 from brancher.optimizers import ProbabilisticOptimizer
 from brancher.variables import Variable, ProbabilisticModel, Ensemble
+from brancher.stochastic_processes import StochasticProcess
 from brancher.standard_variables import DeterministicVariable
 from brancher.transformations import truncate_model
 from brancher.variables import RootVariable
@@ -23,29 +25,6 @@ from brancher.utilities import reassign_samples
 from brancher.utilities import zip_dict
 from brancher.utilities import sum_from_dim
 from brancher.utilities import to_tensor
-
-
-# def maximal_likelihood(random_variable, number_iterations, optimizer=chainer.optimizers.SGD(0.001)):
-#     """
-#     Summary
-#
-#     Parameters
-#     ---------
-#     random_variable : brancher.Variable
-#     number_iterations : int
-#     optimizer : chainer.optimizers
-#     Summary
-#     """
-#     prob_optimizer = ProbabilisticOptimizer(optimizer) #TODO: This function is not up to date
-#     prob_optimizer.setup(random_variable)
-#     loss_list = []
-#     for iteration in tqdm(range(number_iterations)):
-#         loss = -F.sum(random_variable.calculate_log_probability({}))
-#         prob_optimizer.chain.cleargrads()
-#         loss.backward()
-#         prob_optimizer.optimizer.update()
-#         loss_list.append(loss.data)
-#     return loss_list
 
 
 def perform_inference(joint_model, number_iterations, number_samples = 1,
@@ -61,6 +40,8 @@ def perform_inference(joint_model, number_iterations, number_samples = 1,
     Parameters
     ---------
     """
+    if isinstance(joint_model, StochasticProcess):
+        joint_model = joint_model.active_submodel
     if isinstance(joint_model, Variable):
         joint_model = ProbabilisticModel([joint_model])
     if not inference_method:
@@ -163,6 +144,16 @@ class ReverseKL(InferenceMethod):
 
     def post_process(self, joint_model):
         pass
+
+    def construct_posterior_model(self, joint_model):
+        joint_model.update_latent_submodel()
+        latent_names = [var.name for var in joint_model.variables if not var.is_observed]
+        latent_submodel_names = [var.name for var in joint_model.latent_submodel.variables]
+        if set(latent_names) == set(latent_submodel_names):
+            #return copy.deepcopy(joint_model.latent_submodel) #TODO work in progress
+            raise NotImplementedError("The automatric construction of the variational posterior is not currently implemented.")
+        else:
+            raise ValueError("The variational model cannot be constructed automatically as the latent submodel does not contains all the variables")
 
 
 class WassersteinVariationalGradientDescent(InferenceMethod):
@@ -299,7 +290,7 @@ class MAP(InferenceMethod):
         self.learnable_sampler = False
 
     def construct_posterior_model(self, joint_model):
-        test_sample = joint_model._get_sample(1)
+        test_sample = joint_model._get_sample(1, observed=False)
         posterior_model = ProbabilisticModel([DeterministicVariable(value[0, 0, :], variable.name, learnable=True)
                                               for variable, value in test_sample.items()
                                               if (not variable.is_observed) and not isinstance(variable, (DeterministicVariable, RootVariable))])

@@ -8,6 +8,7 @@ from collections.abc import Iterable
 import copy
 
 import numpy as np
+#import sympy as sp #TODO: Symbolic work in progress
 from scipy.special import binom
 
 import torch
@@ -94,6 +95,20 @@ class Distribution(ABC):
         pre_entropy = self._get_entropy(**parameters)
         entropy = self._postprocess_sample(pre_entropy, shape)
         return entropy
+
+    def get_moments(self, center, order, **parameters):
+        raise ValueError("The moment generating function is not implemented for this distribution")
+
+    # @property
+    # def symbolic_variables(self):
+    #     raise ValueError("This distribution does not currently support symbolic computation")
+    #
+    # @property
+    # def symbolic_log_p(self):
+    #     raise ValueError("The symbolic log-probability function is not implemented for this distribution")
+    #
+    # def get_log_p_taylor_expansion(self, center, max_order, **parameters):
+    #     raise ValueError("The Taylor expansion of the log-density is not implemented for this distribution")
 
     def _get_statistic(self, query, **parameters):
         """
@@ -746,6 +761,29 @@ class BernoulliDistribution(UnivariateDistribution, DiscreteDistribution):
         self.has_analytic_entropy = True
         self.has_analytic_mean = True
         self.has_analytic_var = True
+
+    # @property #TODO: Symbolic work in progress
+    # def symbolic_variables(self):
+    #     x, probs = sp.symbols("x probs")
+    #     return {"x": x, "probs": probs}
+    #
+    # @property
+    # def symbolic_log_p(self):
+    #     x = self.symbolic_variables["x"]
+    #     probs = self.symbolic_variables["probs"]
+    #     return x*sp.log(probs) + (1-x)*sp.log(1-probs)
+    #
+    # def get_log_p_taylor_expansion(self, center, max_order, **parameters):
+    #     x = self.symbolic_variables["x"]
+    #     taylor_expression = [sp.diff(self.symbolic_log_p, x, n).__str__() for n in range(max_order+1)]
+    #     return taylor_expression
+
+    def get_moments(self, center, order, **parameters):
+        if "probs" in parameters:
+            p = parameters["probs"]
+        else:
+            p = torch.nn.Sigmoid(parameters["probs"])
+        return p*(1-center)**order + (1-p)*(-center)**order
 
 
 class GeometricDistribution(UnivariateDistribution, DiscreteDistribution):

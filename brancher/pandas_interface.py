@@ -20,6 +20,13 @@ def pandas_frame2dict(dataframe):
         raise ValueError("The input should be either a dictionary or a Pandas dataframe")
 
 
+def pandas_frame2timeseries_data(dataframe):
+    if isinstance(dataframe, pd.core.frame.DataFrame):
+        return [d for d in dataframe.values]
+    else:
+        return dataframe
+
+
 def pandas_frame2value(dataframe, index):
     if isinstance(dataframe, pd.core.frame.DataFrame):
         values = np.array([np.ndarray.tolist(x) if isinstance(x, np.ndarray) else x
@@ -45,12 +52,24 @@ def reformat_value(value, index):
 
 def reformat_sample_to_pandas(sample):
     number_samples = list(sample.values())[0].shape[0]
-    data = [[reformat_value(value, index)
-             for index in range(number_samples)]
+    data = [[reformat_value(value, j)
+             for j in range(number_samples)]
             for variable, value in sample.items()]
     index = [key.name for key in sample.keys()]
     column = range(number_samples)
     frame = pd.DataFrame(data, index=index, columns=column).transpose()
+    return frame
+
+
+def reformat_temporal_sample_to_pandas_timeseries(temporal_sample):
+    number_samples = list(temporal_sample.values())[0][1].shape[0]
+    data = [[reformat_value(time_value[1], j)
+             for j in range(number_samples)]
+            for variable, time_value in temporal_sample.items()]
+    index = ["{0:.2f}".format(time_value[0]) if isinstance(time_value[0], float) else str(time_value[0])
+             for variable, time_value in temporal_sample.items()]
+    column = range(number_samples)
+    frame = pd.DataFrame(data, index=index, columns=column)
     return frame
 
 
