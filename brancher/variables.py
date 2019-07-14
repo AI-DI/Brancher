@@ -583,10 +583,10 @@ class RandomVariable(Variable):
         The probability distribution of the random variable.
     name : str
         The name of the random variable.
-    parents : tuple of brancher variables
+    parents : tuple of brancher.Variables
         A tuple of brancher.Variables that are parents of the random variable.
     link : callable
-        A function Dictionary(brancher.variable: torch.Tensor) -> Dictionary(str: torch.Tensor) that maps the values of
+        A function Dictionary(brancher.Variable: torch.Tensor) -> Dictionary(str: torch.Tensor) that maps the values of
         all the parents to a dictionary of parameters of the probability distribution. It can also contain learnable
         layers and parameters.
     """
@@ -641,7 +641,8 @@ class RandomVariable(Variable):
             parents_values: Dictionary(brancher.Variable: torch.Tensor, numeric, np.ndarray).
 
         Returns:
-            Dictionary(brancher.Variable: torch.Tensor, numeric, or np.ndarray) with link applied to the values.
+            Dictionary(str: torch.Tensor) with link applied to the values. Key is a string with the name of a parameter
+            of the distribution and value is a tensor to assign to the distribution.
         """
         number_samples, number_datapoints = get_number_samples_and_datapoints(parents_values)
         cont_values, discrete_values = split_dict(parents_values,
@@ -716,7 +717,7 @@ class RandomVariable(Variable):
 
             include_parents: Bool. If True, return parents log probability + own log probability
 
-            normalized: Boo. Unused.
+            normalized: Bool. Unused.
 
         Returns:
             torch.Tensor. The log probability of the input values given the model.
@@ -1137,7 +1138,7 @@ class ProbabilisticModel(BrancherClass):
             observed: Bool. It specifies if the sample should be formatted as observed data or Bayesian parameter.
 
             input_values: Dictionary(brancher.Variable: torch.Tensor, numeric, or np.ndarray).  dictionary of values of
-            the parents. It is used for conditioning the sample on the (inputed) values of some of the parents.
+            the parents. It is used for conditioning the sample on the (inputed) values of some of the variables.
 
             differentiable: Bool. Unused.
 
@@ -1181,7 +1182,7 @@ class ProbabilisticModel(BrancherClass):
             number_samples: Int. Number of samples that need to be generated.
 
             input_values: pandas.Dataframe or Dictionary(brancher.Variable: torch.Tensor, numeric, np.ndarray). A
-            dictionary having the brancher.Variables of the model as keys and torch.Tensor, np.array or numberic values.
+            dictionary having the brancher. Variables of the model as keys and torch.Tensor, np.array or numberic values.
             This dictionary provides the values of variables to condition on.
 
         Returns:
@@ -1201,7 +1202,7 @@ class ProbabilisticModel(BrancherClass):
 
         Args:
             input_values: pandas.Dataframe or Dictionary(brancher.Variable: torch.Tensor, numeric, np.ndarray). A
-            dictionary having the brancher.Variables of the model as keys and torch.Tensor, np.array or numberic values.
+            dictionary having the brancher. Variables of the model as keys and torch.Tensor, np.array or numberic values.
             This dictionary provides the values of variables to condition on.
 
         Returns:
@@ -1259,17 +1260,62 @@ class ProbabilisticModel(BrancherClass):
             raise AttributeError("The posterior model has not been initialized.")
 
     def get_posterior_mean(self, query, input_values):
+        """
+        Method. Returns the mean of the posterior model.
+
+        Args:
+            input_values: pandas.Dataframe or Dictionary(brancher.Variable: torch.Tensor, numeric, np.ndarray). A
+            dictionary having the brancher.Variables of the model as keys and torch.Tensor, np.array or numberic values.
+            This dictionary provides the values of variables to condition on.
+
+        Returns:
+            pandas.Dataframe. A pandas dataframe with the mean of each variable in the posterior model
+        """
         return self.posterior_model.get_mean(input_values)
 
     def get_posterior_variance(self, query, input_values):
+        """
+        Method. Returns the variance of the posterior model.
+
+        Args:
+            input_values: pandas.Dataframe or Dictionary(brancher.Variable: torch.Tensor, numeric, np.ndarray). A
+            dictionary having the brancher.Variables of the model as keys and torch.Tensor, np.array or numberic values.
+            This dictionary provides the values of variables to condition on.
+
+        Returns:
+            pandas.Dataframe. A pandas dataframe with the variance of each variable in the posterior model
+        """
         return self.posterior_model.get_variance(input_values)
 
     def get_posterior_entropy(self, query, input_values):
+        """
+        Method. Returns the entropy of the posterior model.
+
+        Args:
+            input_values: pandas.Dataframe or Dictionary(brancher.Variable: torch.Tensor, numeric, np.ndarray). A
+            dictionary having the brancher.Variables of the model as keys and torch.Tensor, np.array or numberic values.
+            This dictionary provides the values of variables to condition on.
+
+        Returns:
+            pandas.Dataframe. A pandas dataframe with the entropy of the posterior model
+        """
         return self.posterior_model.get_entropy(input_values)
 
     def _get_posterior_sample(self, number_samples, input_values={}, differentiable=True):
         """
-        Summary
+        Private method. Used internally. It samples posterior models recursively and uses the sampled variables as
+        conditionals for sampling this model.
+
+        Args:
+            number_samples: Int. Number of samples that need to be samples.
+
+            input_values: Dictionary(brancher.Variable: torch.Tensor, numeric, or np.ndarray). A dictionary of values of
+            the parents. It is used for conditioning the posterior model on the (inputed) values.
+
+            differentiable: Bool. Unused.
+
+        Returns:
+            Dictionary(brancher.Variable: torch.Tensor). A dictionary of samples from the variable and all its parents.
         """
         self.check_posterior_model()
         posterior_sample = self.posterior_model._get_posterior_sample(number_samples=number_samples,
@@ -1279,6 +1325,20 @@ class ProbabilisticModel(BrancherClass):
         return sample
 
     def get_posterior_sample(self, number_samples, input_values={}):
+        """
+        Method. It returns a user specified number of samples conditional on the posterior model given the evidence of
+        the input values.
+
+        Args:
+            number_samples: Int. Number of samples that need to be generated.
+
+            input_values: pandas.Dataframe or Dictionary(brancher.Variable: torch.Tensor, numeric, np.ndarray). A
+            dictionary having the brancher.Variables of the model as keys and torch.Tensor, np.array or numberic values.
+            This dictionary provides the values of variables to condition the posterior model on.
+
+        Returns:
+            pandas.Dataframe. A pandas dataframe with a row for each sample and column for each variable in the model.
+        """
         reformatted_input_values = reformat_sampler_input(pandas_frame2dict(input_values),
                                                                             number_samples=number_samples)
         raw_sample = self._get_posterior_sample(number_samples, input_values=reformatted_input_values)
@@ -1287,6 +1347,26 @@ class ProbabilisticModel(BrancherClass):
 
     def get_p_log_probabilities_from_q_samples(self, q_samples, q_model, empirical_samples={},
                                                for_gradient=False, normalized=True):
+        """
+        Method. Calculates the log probability that this model (model p) would have generated samples generated by model q.
+
+        Args:
+            q_samples: Dictionary(brancher.Variable: torch.Tensor, numeric, np.ndarray). Samples generated by q_model.
+            Dictionary should have variables in q_model as key and (a collection of) samples from this model as value.
+
+            q_model: brancher.ProbabilisticModel. The model that generated q_samples.
+
+            empirical_samples: Dictionary(brancher.Variable: torch.Tensor, numeric, np.ndarray). A dictionary of values
+            of the variables in this model. It is used for conditioning the sample on the (inputed) values of some of the
+            variables of this model.
+
+            for_gradient: Bool. unused.
+
+            normalized: Bool. unused.
+
+        Returns:
+            torch.Tensor. The log probability of the sampled values from q_model given this model.
+        """
         p_samples = reassign_samples(q_samples, source_model=q_model, target_model=self)
         p_samples.update(empirical_samples)
         p_log_prob = self.calculate_log_probability(p_samples, for_gradient=for_gradient, normalized=normalized)
@@ -1294,6 +1374,26 @@ class ProbabilisticModel(BrancherClass):
 
     def get_importance_weights(self, q_samples, q_model, empirical_samples={},
                                for_gradient=False, give_normalization=False):
+        """
+        Method. Calculates the importance weights per sample from model q.
+
+        Args:
+            q_samples: Dictionary(brancher.Variable: torch.Tensor, numeric, np.ndarray). Samples generated by q_model.
+            Dictionary should have variables in q_model as key and (a collection of) samples from this model as value.
+
+            q_model: brancher.ProbabilisticModel. The model that generated the samples.
+
+            empirical_samples: Dictionary(brancher.Variable: torch.Tensor, numeric, np.ndarray). A dictionary of values
+            of the variables in this model. It is used for conditioning the sample on the (inputed) values of some of the
+            variables of this model.
+
+            for_gradient: Bool. unused.
+
+            give_normalization: Bool. If true this function also returns normalization factor.
+
+        Returns
+            np.ndarray: Normalized weights for each sample of the q_model given this model.
+        """
         if not empirical_samples:
             empirical_samples = self.observed_submodel._get_sample(1, observed=True, differentiable=False)
         q_log_prob = q_model.calculate_log_probability(q_samples,
@@ -1345,12 +1445,23 @@ class ProbabilisticModel(BrancherClass):
 
     def reset(self):
         """
-        Summary
+        Method. Reset all variables in this model. Resetting a variable resets the evaluated flag of the variable.
+        
+        Args: None.
+
+        Returns: None.
         """
         for var in self.flatten():
             var.reset(recursive=False)
 
     def _flatten(self):
+        """
+        Private method. Returns a list of all variables in the model.
+
+        Args: None.
+
+        Returns: List(brancher.Variable).
+        """
         variables = list(join_sets_list([var.ancestors.union({var}) for var in self._input_variables]))
         sorted_variables = sorted(variables, key=lambda v: v.name)
         if self._fully_observed:
@@ -1364,12 +1475,13 @@ class ProbabilisticModel(BrancherClass):
 
 class PosteriorModel(ProbabilisticModel):
     """
-    Summary
+    PosteriorModels are collections of Brancher variables.
 
     Parameters
     ----------
-    variables : tuple of brancher variables
-        Summary
+    posterior_model: brancher.ProbabilisticModel. The posterior model model will use all variables in this model.
+
+    joint_model: brancher.ProbabilisticModel. The posterior model will map its variables to this model.
     """
     def __init__(self, posterior_model, joint_model):
         super().__init__(posterior_model.variables)
@@ -1394,8 +1506,8 @@ class PosteriorModel(ProbabilisticModel):
 
 def var2link(var):
     """
-    Function. Constructs a partialLink from variables, numbers, numpy arrays, tensors or a combination of variables and
-    partialLinks.
+    Function. Constructs a PartialLink from variables, numbers, numpy arrays, tensors or a combination of variables and
+    PartialLinks.
 
     Args:
         var: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of brancher.Variables and
@@ -1423,7 +1535,10 @@ class Ensemble(BrancherClass):
 
     Parameters
     ----------
-    model_list: Iterable(brancher.ProbabilisticModel). A collection of ProbabilisticModels.
+    model_list: List(brancher.ProbabilisticModel). A collection of ProbabilisticModels.
+
+    weigths: List(numeric). A list of weights per model in model_list. The weights indicate the chance the model will be sampled if the
+    ensemble is sampled.
     """
     def __init__(self, model_list, weights=None):
         #TODO: assert that all variables have the same name
@@ -1435,6 +1550,25 @@ class Ensemble(BrancherClass):
             self.weights = np.array(weights)
 
     def _get_sample(self, number_samples, observed=None, input_values={}, differentiable=True):
+        """
+        Private method. Used internally. It returns a joint sample from all variables in the model.
+
+        Args:
+            number_samples: Int. Number of samples that need to be samples.
+
+            resample: Bool. If false it returns the previously sampled values. It avoids that the parents of a variable
+            are sampled multiple times.
+
+            observed: Bool. It specifies if the sample should be formatted as observed data or Bayesian parameter.
+
+            input_values: Dictionary(brancher.Variable: torch.Tensor, numeric, or np.ndarray). A dictionary of values of
+            the parents. It is used for conditioning the sample on the (inputed) values of some of the variables.
+
+            differentiable: Bool. Unused.
+
+        Returns:
+            Dictionary(brancher.Variable: torch.Tensor). A dictionary of samples from the variable and all its parents.
+        """
         num_samples_list = np.random.multinomial(number_samples, self.weights)
         samples_list = [model._get_sample(n, differentiable=differentiable)
                         for n, model in zip(num_samples_list, self.model_list)]
@@ -1455,6 +1589,13 @@ class Ensemble(BrancherClass):
 
 
     def _flatten(self):
+        """
+        Private method. Returns a variable list for each model.
+
+        Args: None.
+
+        Returns: List(List(brancher.Variable)).
+        """
         return [model.flatten() for model in self.model_list]
 
     def get_sample(self, number_samples, input_values={}): #TODO: code duplication here
@@ -1476,7 +1617,21 @@ class Ensemble(BrancherClass):
 
 
 class PartialLink(BrancherClass):
+    """
+    A PartialLink defines a symbolic operations between variables. The vars attribute of the link is the set of variables
+    that are used in the operation. The fn attribute is a lambda that specify the operation as a functions between
+    the values of the variables in vars and a numeric output. This is required for defining the forward pass of models.
 
+    Parameters
+    ----------
+    vars: Set(brancher.Variable). A list of variables on which the operation applies.
+
+    fn: callable. A function Dictionary(brancher.Variable: torch.Tensor) -> Dictionary(str: torch.Tensor)
+
+    links: Set(brancher.PartialLink). Other partial links this links needs for its operations.
+
+    string: string representation of this link.
+    """
     def __init__(self, vars, fn, links, string=""):
         self.vars = vars
         self.fn = fn
