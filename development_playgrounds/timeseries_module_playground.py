@@ -25,7 +25,8 @@ temporal_sample = X.get_timeseries_sample(1, query_points=num_timepoints,
 
 ## Observe model ##
 data = temporal_sample
-query_points = range(num_timepoints)
+#query_points = range(num_timepoints)
+query_points = list(range(0, 10)) + list(range(20, 60))
 X.observe(data, query_points)
 
 
