@@ -3,7 +3,7 @@ import numpy as np
 import chainer.links as L
 
 from brancher.variables import RootVariable
-from brancher.standard_variables import NormalVariable
+from brancher.standard_variables import NormalStandardVariable
 from brancher.inference import maximal_likelihood
 import brancher.functions as BF
 from brancher.functions import BrancherFunction as bf
@@ -19,7 +19,7 @@ input_variable = np.random.normal(0, 1, (number_observations, number_regressors)
 regression_link = bf(L.Linear(number_regressors, 1))
 x = RootVariable(input_variable, "x", is_observed=True)
 sigma = RootVariable(0.1, "sigma", learnable=True)
-y = NormalVariable(regression_link(x), BF.exp(sigma), "y")
+y = NormalStandardVariable(regression_link(x), BF.exp(sigma), "y")
 
 # Observations
 data = (np.matmul(x.value.data, real_weights)

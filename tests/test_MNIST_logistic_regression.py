@@ -4,7 +4,7 @@ import numpy as np
 import torchvision
 
 from brancher.variables import RootVariable, ProbabilisticModel
-from brancher.standard_variables import NormalVariable, CategoricalVariable, EmpiricalVariable, RandomIndices
+from brancher.standard_variables import NormalStandardVariable, CategoricalStandardVariable, EmpiricalStandardVariable, RandomIndices
 from brancher import inference
 import brancher.functions as BF
 
@@ -20,16 +20,16 @@ output_labels = train.train_labels.numpy()
 # Data sampling model
 minibatch_size = 50
 minibatch_indices = RandomIndices(dataset_size=dataset_size, batch_size=minibatch_size, name="indices", is_observed=True)
-x = EmpiricalVariable(input_variable, indices=minibatch_indices, name="x", is_observed=True)
-labels = EmpiricalVariable(output_labels, indices=minibatch_indices, name="labels", is_observed=True)
+x = EmpiricalStandardVariable(input_variable, indices=minibatch_indices, name="x", is_observed=True)
+labels = EmpiricalStandardVariable(output_labels, indices=minibatch_indices, name="labels", is_observed=True)
 
 # Architecture parameters
-weights = NormalVariable(np.zeros((number_output_classes, number_pixels)),
-                         10*np.ones((number_output_classes, number_pixels)), "weights")
+weights = NormalStandardVariable(np.zeros((number_output_classes, number_pixels)),
+                                 10 * np.ones((number_output_classes, number_pixels)), "weights")
 
 # Forward pass
 final_activations = BF.matmul(weights, x)
-k = CategoricalVariable(logits=final_activations, name="k")
+k = CategoricalStandardVariable(logits=final_activations, name="k")
 
 # Probabilistic model
 model = ProbabilisticModel([k])
@@ -38,8 +38,8 @@ model = ProbabilisticModel([k])
 k.observe(labels)
 
 # Variational Model
-Qweights = NormalVariable(np.zeros((number_output_classes, number_pixels)),
-                          0.1*np.ones((number_output_classes, number_pixels)), "weights", learnable=True)
+Qweights = NormalStandardVariable(np.zeros((number_output_classes, number_pixels)),
+                                  0.1 * np.ones((number_output_classes, number_pixels)), "weights", learnable=True)
 variational_model = ProbabilisticModel([Qweights])
 model.set_posterior_model(variational_model)
 
@@ -58,9 +58,9 @@ plt.show()
 num_images = 2000
 test_size = len(test)
 test_indices = RandomIndices(dataset_size=test_size, batch_size=1, name="test_indices", is_observed=True)
-test_images = EmpiricalVariable(np.reshape(test.test_data.numpy(), newshape=(test.test_data.shape[0], number_pixels, 1)),
-                           indices=test_indices, name="x_test", is_observed=True)
-test_labels = EmpiricalVariable(test.test_labels.numpy(), indices=test_indices, name="labels", is_observed=True)
+test_images = EmpiricalStandardVariable(np.reshape(test.test_data.numpy(), newshape=(test.test_data.shape[0], number_pixels, 1)),
+                                        indices=test_indices, name="x_test", is_observed=True)
+test_labels = EmpiricalStandardVariable(test.test_labels.numpy(), indices=test_indices, name="labels", is_observed=True)
 test_model = ProbabilisticModel([test_images, test_labels])
 
 s = 0

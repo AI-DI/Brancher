@@ -9,14 +9,14 @@ import torch
 
 #from brancher.links import brancher_decorator
 from brancher.variables import DeterministicVariable, RandomVariable, ProbabilisticModel
-from brancher.standard_variables import NormalVariable
+from brancher.standard_variables import NormalStandardVariable
 from brancher.functions import BrancherFunction
 import brancher.functions as BF
 #import brancher.links as BL
 
 ##
-a = NormalVariable(1., 0.001, name='a')
-b = NormalVariable(1., 0.001, name='b')
+a = NormalStandardVariable(1., 0.001, name='a')
+b = NormalStandardVariable(1., 0.001, name='b')
 
 c = a + b
 

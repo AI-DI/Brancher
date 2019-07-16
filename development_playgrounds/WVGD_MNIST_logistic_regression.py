@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from brancher.variables import RootVariable, ProbabilisticModel
-from brancher.standard_variables import NormalVariable, TruncatedNormalVariable, CategoricalVariable, EmpiricalVariable, RandomIndices
+from brancher.standard_variables import NormalStandardVariable, TruncatedNormalVariable, CategoricalStandardVariable, EmpiricalStandardVariable, RandomIndices
 from brancher import inference
 import brancher.functions as BF
 
@@ -23,16 +23,16 @@ output_labels = np.array([image[1]*np.ones((1, 1)) for image in train][0:dataset
 # Data sampling model
 minibatch_size = 50
 minibatch_indices = RandomIndices(dataset_size=dataset_size, batch_size=minibatch_size, name="indices", is_observed=True)
-x = EmpiricalVariable(input_variable, indices=minibatch_indices, name="x", is_observed=True)
-labels = EmpiricalVariable(output_labels, indices=minibatch_indices, name="labels", is_observed=True)
+x = EmpiricalStandardVariable(input_variable, indices=minibatch_indices, name="x", is_observed=True)
+labels = EmpiricalStandardVariable(output_labels, indices=minibatch_indices, name="labels", is_observed=True)
 
 # Architecture parameters
-weights = NormalVariable(np.zeros((number_output_classes, number_pixels)),
-                         10*np.ones((number_output_classes, number_pixels)), "weights")
+weights = NormalStandardVariable(np.zeros((number_output_classes, number_pixels)),
+                                 10 * np.ones((number_output_classes, number_pixels)), "weights")
 
 # Forward pass
 final_activations = BF.matmul(weights, x)
-k = CategoricalVariable(softmax_p=final_activations, name="k")
+k = CategoricalStandardVariable(softmax_p=final_activations, name="k")
 
 # Probabilistic model
 model = ProbabilisticModel([k])
@@ -77,10 +77,10 @@ plt.show()
 num_images = 2000
 test_size = len(test)
 test_indices = RandomIndices(dataset_size=test_size, batch_size=1, name="test_indices", is_observed=True)
-test_images = EmpiricalVariable(np.array([np.reshape(image[0], newshape=(number_pixels, 1)) for image in test]).astype("float32"),
-                                indices=test_indices, name="x_test", is_observed=True)
-test_labels = EmpiricalVariable(np.array([image[1]*np.ones((1, 1))
-                                          for image in test]).astype("int32"), indices=test_indices, name="labels", is_observed=True)
+test_images = EmpiricalStandardVariable(np.array([np.reshape(image[0], newshape=(number_pixels, 1)) for image in test]).astype("float32"),
+                                        indices=test_indices, name="x_test", is_observed=True)
+test_labels = EmpiricalStandardVariable(np.array([image[1] * np.ones((1, 1))
+                                                  for image in test]).astype("int32"), indices=test_indices, name="labels", is_observed=True)
 test_model = ProbabilisticModel([test_images, test_labels])
 
 s = 0

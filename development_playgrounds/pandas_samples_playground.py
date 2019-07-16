@@ -1,18 +1,18 @@
 import chainer
 
 from brancher.variables import ProbabilisticModel
-from brancher.standard_variables import NormalVariable, LogNormalVariable
+from brancher.standard_variables import NormalStandardVariable, LogNormalStandardVariable
 from brancher import inference
 
 # Real model
 nu_real = 1.
 mu_real = -2.
-x_real = NormalVariable(mu_real, nu_real, "x_real")
+x_real = NormalStandardVariable(mu_real, nu_real, "x_real")
 
 # Normal model
-nu = LogNormalVariable(0., 1., "nu")
-mu = NormalVariable(0., 10., "mu")
-x = NormalVariable(mu, nu, "x")
+nu = LogNormalStandardVariable(0., 1., "nu")
+mu = NormalStandardVariable(0., 10., "mu")
+x = NormalStandardVariable(mu, nu, "x")
 model = ProbabilisticModel([x])
 
 print(model)
@@ -36,8 +36,8 @@ data = x_real._get_sample(number_samples=50)
 x.observe(data[x_real][:, 0, :])
 
 # Variational model
-Qnu = LogNormalVariable(0., 1., "nu", learnable=True)
-Qmu = NormalVariable(0., 1., "mu", learnable=True)
+Qnu = LogNormalStandardVariable(0., 1., "nu", learnable=True)
+Qmu = NormalStandardVariable(0., 1., "mu", learnable=True)
 model.set_posterior_model(ProbabilisticModel([Qmu, Qnu]))
 
 # Inference

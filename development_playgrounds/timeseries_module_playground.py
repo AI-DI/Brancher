@@ -2,40 +2,47 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from brancher.stochastic_processes import MarkovProcess
-from brancher.standard_variables import NormalVariable as Normal
-from brancher.standard_variables import BetaVariable as Beta
-from brancher.standard_variables import LogNormalVariable as LogNormal
+from brancher.standard_variables import NormalStandardVariable as Normal
+from brancher.standard_variables import BetaStandardVariable as Beta
+from brancher.standard_variables import LogNormalStandardVariable as LogNormal
 from brancher.inference import perform_inference
-from brancher.inference import MAP
+from brancher.inference import ReverseKL
 
 ## Create time series model ##
 x0 = Normal(0, 1, "x_0")
-x1 = Normal(0, 1, "x_1")
-b = Beta(1, 1, "b")
-c = Normal(0, 0.1, "c")
-sigma = LogNormal(1, 1, "sigma")
-X = MarkovProcess((x0, x1), lambda x0, x1: Normal(b*x1 + c*x0, sigma, "x"))
+X = MarkovProcess(x0, lambda t, x: Normal(x, 0.6, "x_{}".format(t)))
 
 ## Sample ##
-num_timepoints = 50
-temporal_sample = X.get_timeseries_sample(1, query_points=num_timepoints,
-                                          input_values={sigma: 1., b: 1., c: -0.05})
-#temporal_sample.plot()
-#plt.show()
+num_timepoints = 100
+temporal_sample = X.get_timeseries_sample(1, query_points=num_timepoints)
+temporal_sample.plot()
+plt.show()
 
 ## Observe model ##
-data = temporal_sample
+#data = temporal_sample
+data = temporal_sample[:10].append(temporal_sample[90:])
 #query_points = range(num_timepoints)
-query_points = list(range(0, 10)) + list(range(20, 60))
+query_points = list(range(0, 10)) + list(range(90, 100))
 X.observe(data, query_points)
 
+## Variational model ##
+
+# Variational parameters #
+
+# Variational process #
+Qx0 = Normal(0, 1, "x_0", learnable=True)
+Qbeta = Beta(1, 1, "beta", learnable=True)
+QX = MarkovProcess(Qx0, lambda t, x: Normal(Qbeta*x, 0.6, name="x_{}".format(t), has_bias=True, learnable=True))
+
+X.set_posterior_model(process=QX)
 
 ## Perform ML inference ##
 perform_inference(X,
-                  inference_method=MAP(),
+                  inference_method=ReverseKL(),
                   number_iterations=1000,
-                  optimizer="SGD",
-                  lr=0.001)
+                  number_samples=100,
+                  optimizer="Adagrad",
+                  lr=0.01)
 loss_list = X.active_submodel.diagnostics["loss curve"]
 plt.plot(loss_list)
 plt.show()

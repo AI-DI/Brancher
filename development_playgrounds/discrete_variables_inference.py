@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 
 from brancher.variables import ProbabilisticModel
-from brancher.standard_variables import BernulliVariable, NormalVariable
+from brancher.standard_variables import BernulliVariable, NormalStandardVariable
 import brancher.functions as BF
 from brancher import inference
 from brancher.inference import ReverseKL
@@ -10,7 +10,7 @@ from brancher.gradient_estimators import BlackBoxEstimator, Taylor1Estimator
 #Model
 z1 = BernulliVariable(logits=0., name="z1")
 z2 = BernulliVariable(logits=0., name="z2")
-y = NormalVariable(2*z1 + z2, 1., name="y")
+y = NormalStandardVariable(2 * z1 + z2, 1., name="y")
 model = ProbabilisticModel([y])
 
 #Generate data

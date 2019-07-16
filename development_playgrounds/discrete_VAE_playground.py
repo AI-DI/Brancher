@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from brancher.variables import RootVariable, ProbabilisticModel
-from brancher.standard_variables import NormalVariable, EmpiricalVariable, BernulliVariable, DeterministicVariable, LogNormalVariable
+from brancher.standard_variables import NormalStandardVariable, EmpiricalStandardVariable, BernulliVariable, DeterministicStandardVariable, LogNormalStandardVariable
 from brancher import inference
 from brancher.inference import ReverseKL
 from brancher.gradient_estimators import Taylor1Estimator, PathwiseDerivativeEstimator, BlackBoxEstimator
@@ -68,13 +68,13 @@ decoder = BF.BrancherFunction(DecoderArchitecture(latent_size=latent_size, image
 
 # Generative model
 z = BernulliVariable(logits=np.ones((latent_size,)), name="z")
-decoder_output = DeterministicVariable(decoder(z), name="decoder_output")
+decoder_output = DeterministicStandardVariable(decoder(z), name="decoder_output")
 x = BernulliVariable(logits=decoder_output["mean"], name="x")
 model = ProbabilisticModel([x, z])
 
 # Amortized variational distribution
-Qx = EmpiricalVariable(dataset, batch_size=100, name="x", is_observed=True)
-encoder_output = DeterministicVariable(encoder(Qx), name="encoder_output")
+Qx = EmpiricalStandardVariable(dataset, batch_size=100, name="x", is_observed=True)
+encoder_output = DeterministicStandardVariable(encoder(Qx), name="encoder_output")
 Qz = BernulliVariable(logits=encoder_output["mean"], name="z")
 model.set_posterior_model(ProbabilisticModel([Qx, Qz]))
 

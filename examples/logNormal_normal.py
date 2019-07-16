@@ -5,13 +5,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from brancher.variables import ProbabilisticModel
-from brancher.standard_variables import NormalVariable, LogNormalVariable
+from brancher.standard_variables import NormalStandardVariable, LogNormalStandardVariable
 from brancher import inference
 
 # Normal model
-nu = LogNormalVariable(0., 1., "nu")
-mu = NormalVariable(0., 10., "mu")
-x = NormalVariable(mu, nu, "x")
+nu = LogNormalStandardVariable(0., 1., "nu")
+mu = NormalStandardVariable(0., 10., "mu")
+x = NormalStandardVariable(mu, nu, "x")
 model = ProbabilisticModel([x]) # to fix plot_posterior (flatten automatically?)
 
 # # Generate data
@@ -23,8 +23,8 @@ data = model.get_sample(number_samples=20, input_values={mu: mu_real, nu: nu_rea
 x.observe(data)
 
 # Variational model
-Qnu = LogNormalVariable(0., 1., "nu", learnable=True)
-Qmu = NormalVariable(0., 1., "mu", learnable=True)
+Qnu = LogNormalStandardVariable(0., 1., "nu", learnable=True)
+Qmu = NormalStandardVariable(0., 1., "mu", learnable=True)
 model.set_posterior_model(ProbabilisticModel([Qmu, Qnu]))
 
 # Inference

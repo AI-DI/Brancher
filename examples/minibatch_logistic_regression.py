@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from brancher.variables import RootVariable, ProbabilisticModel
-from brancher.standard_variables import NormalVariable, BinomialVariable, EmpiricalVariable, RandomIndices
+from brancher.standard_variables import NormalStandardVariable, BinomialStandardVariable, EmpiricalStandardVariable, RandomIndices
 from brancher import inference
 import brancher.functions as BF
 
@@ -22,11 +22,11 @@ output_labels = np.concatenate((x1_labels, x2_labels), axis=0)
 # Probabilistic model
 minibatch_size = 30
 minibatch_indices = RandomIndices(dataset_size=dataset_size, batch_size=minibatch_size, name="indices", is_observed=True)
-x = EmpiricalVariable(input_variable, indices=minibatch_indices, name="x", is_observed=True)
-labels = EmpiricalVariable(output_labels, indices=minibatch_indices, name="labels", is_observed=True)
-weights = NormalVariable(np.zeros((1, number_regressors)), 0.5*np.ones((1, number_regressors)), "weights")
+x = EmpiricalStandardVariable(input_variable, indices=minibatch_indices, name="x", is_observed=True)
+labels = EmpiricalStandardVariable(output_labels, indices=minibatch_indices, name="labels", is_observed=True)
+weights = NormalStandardVariable(np.zeros((1, number_regressors)), 0.5 * np.ones((1, number_regressors)), "weights")
 logit_p = BF.matmul(weights, x)
-k = BinomialVariable(1, logits=logit_p, name="k")
+k = BinomialStandardVariable(1, logits=logit_p, name="k")
 model = ProbabilisticModel([k])
 
 #samples = model._get_sample(300)
@@ -39,8 +39,8 @@ k.observe(labels)
 #observed_samples = observed_model._get_sample(number_samples=1, observed=True)
 
 # Variational Model
-Qweights = NormalVariable(np.zeros((1, number_regressors)),
-                          np.ones((1, number_regressors)), "weights", learnable=True)
+Qweights = NormalStandardVariable(np.zeros((1, number_regressors)),
+                                  np.ones((1, number_regressors)), "weights", learnable=True)
 model.set_posterior_model(ProbabilisticModel([Qweights]))
 
 # Inference

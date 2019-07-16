@@ -11,7 +11,7 @@ dataset_size = len(train)
 input_variable = np.reshape(train.train_data.numpy(), newshape=(dataset_size, 1, image_size, image_size))
 output_labels = train.train_labels.numpy()
 
-from brancher.standard_variables import EmpiricalVariable as Empirical
+from brancher.standard_variables import EmpiricalStandardVariable as Empirical
 from brancher.standard_variables import RandomIndices
 
 # Data sampling model
@@ -28,8 +28,8 @@ labels = Empirical(output_labels, indices=minibatch_indices,
 
 from brancher import functions as BF
 
-from brancher.standard_variables import NormalVariable as Normal
-from brancher.standard_variables import CategoricalVariable as Categorical
+from brancher.standard_variables import NormalStandardVariable as Normal
+from brancher.standard_variables import CategoricalStandardVariable as Categorical
 
 in_channels = 1
 out_channels = 5

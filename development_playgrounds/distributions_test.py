@@ -1,43 +1,43 @@
 import numpy as np
 
-from brancher.standard_variables import DirichletVariable, GeometricVariable, Chi2Variable, \
-    GumbelVariable, HalfCauchyVariable, HalfNormalVariable, NegativeBinomialVariable, PoissonVariable, StudentTVariable, UniformVariable, BernoulliVariable
+from brancher.standard_variables import DirichletStandardVariable, GeometricStandardVariable, Chi2StandardVariable, \
+    GumbelStandardVariable, HalfCauchyStandardVariable, HalfNormalStandardVariable, NegativeBinomialStandardVariable, PoissonStandardVariable, StudentTStandardVariable, UniformStandardVariable, BernoulliStandardVariable
 
 ## Distributions and samples ##
-a = DirichletVariable(concentration=np.ones((10, 10)), name="a")
+a = DirichletStandardVariable(concentration=np.ones((10, 10)), name="a")
 print(a.get_sample(2))
 
-b = Chi2Variable(3, "b")
+b = Chi2StandardVariable(3, "b")
 print(b.get_sample(2))
 
-c = GeometricVariable(logits=0, name="c")
+c = GeometricStandardVariable(logits=0, name="c")
 print(c.get_sample(2))
 
-d = GumbelVariable(loc=0, scale=1, name="d")
+d = GumbelStandardVariable(loc=0, scale=1, name="d")
 print(d.get_sample(2))
 
-e = HalfCauchyVariable(scale=1, name="e")
+e = HalfCauchyStandardVariable(scale=1, name="e")
 print(e.get_sample(2))
 
-f = HalfCauchyVariable(scale=1, name="f")
+f = HalfCauchyStandardVariable(scale=1, name="f")
 print(f.get_sample(2))
 
-g = HalfNormalVariable(scale=1, name="g")
+g = HalfNormalStandardVariable(scale=1, name="g")
 print(g.get_sample(2))
 
-h = NegativeBinomialVariable(1, logits=0, name="h")
+h = NegativeBinomialStandardVariable(1, logits=0, name="h")
 print(h.get_sample(2))
 
-i = PoissonVariable(1, name="i")
+i = PoissonStandardVariable(1, name="i")
 print(i.get_sample(2))
 
-j = StudentTVariable(1,0,1, name="j")
+j = StudentTStandardVariable(1, 0, 1, name="j")
 print(j.get_sample(2))
 
-l = UniformVariable(1, 2, name="l")
+l = UniformStandardVariable(1, 2, name="l")
 print(l.get_sample(2))
 
-m = BernoulliVariable(probs=0.5, name="m")
+m = BernoulliStandardVariable(probs=0.5, name="m")
 print(m.get_sample(2))
 
 ## Moments ##

@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from brancher.variables import RootVariable, RandomVariable, ProbabilisticModel
-from brancher.standard_variables import NormalVariable, LogNormalVariable, BetaVariable
+from brancher.standard_variables import NormalStandardVariable, LogNormalStandardVariable, BetaStandardVariable
 from brancher import inference
 import brancher.functions as BF
 
@@ -11,9 +11,9 @@ import brancher.functions as BF
 T = 20
 driving_noise = 1.
 measure_noise = 0.5
-x0 = NormalVariable(0., driving_noise, 'x0')
-y0 = NormalVariable(x0, measure_noise, 'x0')
-b = BetaVariable(0.5, 1., 'b')
+x0 = NormalStandardVariable(0., driving_noise, 'x0')
+y0 = NormalStandardVariable(x0, measure_noise, 'x0')
+b = BetaStandardVariable(0.5, 1., 'b')
 
 x = [x0]
 y = [y0]
@@ -22,8 +22,8 @@ y_names = ["y0"]
 for t in range(1,T):
     x_names.append("x{}".format(t))
     y_names.append("y{}".format(t))
-    x.append(NormalVariable(b*x[t-1], driving_noise, x_names[t]))
-    y.append(NormalVariable(x[t], measure_noise, y_names[t]))
+    x.append(NormalStandardVariable(b * x[t - 1], driving_noise, x_names[t]))
+    y.append(NormalStandardVariable(x[t], measure_noise, y_names[t]))
 AR_model = ProbabilisticModel(x + y)
 
 # Generate data #
@@ -37,13 +37,13 @@ print("The true coefficient is: {}".format(float(true_b)))
 [yt.observe(data[yt][:, 0, :]) for yt in y]
 
 # Autoregressive variational distribution #
-Qb = BetaVariable(0.5, 0.5, "b", learnable=True)
+Qb = BetaStandardVariable(0.5, 0.5, "b", learnable=True)
 logit_b_post = RootVariable(0., 'logit_b_post', learnable=True)
-Qx = [NormalVariable(0., 1., 'x0', learnable=True)]
+Qx = [NormalStandardVariable(0., 1., 'x0', learnable=True)]
 Qx_mean = [RootVariable(0., 'x0_mean', learnable=True)]
 for t in range(1, T):
     Qx_mean.append(RootVariable(0., x_names[t] + "_mean", learnable=True))
-    Qx.append(NormalVariable(logit_b_post*Qx[t-1] + Qx_mean[t], 1., x_names[t], learnable=True))
+    Qx.append(NormalStandardVariable(logit_b_post * Qx[t - 1] + Qx_mean[t], 1., x_names[t], learnable=True))
 variational_posterior = ProbabilisticModel([Qb] + Qx)
 AR_model.set_posterior_model(variational_posterior)
 

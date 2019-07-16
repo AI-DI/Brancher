@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from brancher.variables import RootVariable, RandomVariable, ProbabilisticModel
-from brancher.standard_variables import NormalVariable, LogNormalVariable
+from brancher.standard_variables import NormalStandardVariable, LogNormalStandardVariable
 from brancher import inference
 from brancher.visualizations import plot_posterior
 
@@ -17,20 +17,20 @@ plt.plot(deterministic_input)
 plt.plot()
 
 # Probabilistic model
-a = LogNormalVariable(0., 1., name="a")
-b = LogNormalVariable(0., 1., name="b")
-c = NormalVariable(0., 2., name="c")
-d = NormalVariable(0., 2., name="d")
-e = NormalVariable(0., 10., name="e")
-xi = LogNormalVariable(0., 0.1, name="xi")
-chi = LogNormalVariable(0., 0.1, name="chi")
-x_series = [NormalVariable(0., 1., name="x_0")]
-y_series = [NormalVariable(0., 1., name="y_0")]
+a = LogNormalStandardVariable(0., 1., name="a")
+b = LogNormalStandardVariable(0., 1., name="b")
+c = NormalStandardVariable(0., 2., name="c")
+d = NormalStandardVariable(0., 2., name="d")
+e = NormalStandardVariable(0., 10., name="e")
+xi = LogNormalStandardVariable(0., 0.1, name="xi")
+chi = LogNormalStandardVariable(0., 0.1, name="chi")
+x_series = [NormalStandardVariable(0., 1., name="x_0")]
+y_series = [NormalStandardVariable(0., 1., name="y_0")]
 for n, t in enumerate(time_range):
     x_new_mean = (1-dt*a)*x_series[-1] + dt*c*y_series[-1] + dt*e*deterministic_input[n]
     y_new_mean = (1-dt*b)*y_series[-1] + dt*d*x_series[-1]
-    x_series += [NormalVariable(x_new_mean, np.sqrt(dt)*xi, name="x_{}".format(n+1))]
-    y_series += [NormalVariable(y_new_mean, np.sqrt(dt)*chi, name="y_{}".format(n+1))]
+    x_series += [NormalStandardVariable(x_new_mean, np.sqrt(dt) * xi, name="x_{}".format(n + 1))]
+    y_series += [NormalStandardVariable(y_new_mean, np.sqrt(dt) * chi, name="y_{}".format(n + 1))]
 dynamic_causal_model = ProbabilisticModel([x_series[-1], y_series[-1]])
 
 # Run dynamics
@@ -45,13 +45,13 @@ observable_data = sample[[x.name for x in x_series] + [y.name for y in y_series]
 dynamic_causal_model.observe(observable_data)
 
 # Variational model
-Qa = LogNormalVariable(0., 0.5, name="a", learnable=True)
-Qb = LogNormalVariable(0., 0.5, name="b", learnable=True)
-Qc = NormalVariable(0., 0.1, name="c", learnable=True)
-Qd = NormalVariable(0., 0.1, name="d", learnable=True)
-Qe = NormalVariable(0.,5., name="e", learnable=True)
-Qxi = LogNormalVariable(0.1, 0.1, name="xi", learnable=True)
-Qchi = LogNormalVariable(0.1, 0.1, name="chi", learnable=True)
+Qa = LogNormalStandardVariable(0., 0.5, name="a", learnable=True)
+Qb = LogNormalStandardVariable(0., 0.5, name="b", learnable=True)
+Qc = NormalStandardVariable(0., 0.1, name="c", learnable=True)
+Qd = NormalStandardVariable(0., 0.1, name="d", learnable=True)
+Qe = NormalStandardVariable(0., 5., name="e", learnable=True)
+Qxi = LogNormalStandardVariable(0.1, 0.1, name="xi", learnable=True)
+Qchi = LogNormalStandardVariable(0.1, 0.1, name="chi", learnable=True)
 variational_posterior = ProbabilisticModel([Qa, Qb, Qc, Qd, Qe, Qxi, Qchi])
 dynamic_causal_model.set_posterior_model(variational_posterior)
 

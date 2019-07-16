@@ -2,22 +2,22 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from brancher.variables import RootVariable, RandomVariable, ProbabilisticModel
-from brancher.standard_variables import NormalVariable, LogNormalVariable, BetaVariable
+from brancher.standard_variables import NormalStandardVariable, LogNormalStandardVariable, BetaStandardVariable
 from brancher import inference
 import brancher.functions as BF
 
 # Probabilistic model #
 T = 200
 
-nu = LogNormalVariable(0.3, 1., 'nu')
-x0 = NormalVariable(0., 1., 'x0')
-b = BetaVariable(0.5, 1.5, 'b')
+nu = LogNormalStandardVariable(0.3, 1., 'nu')
+x0 = NormalStandardVariable(0., 1., 'x0')
+b = BetaStandardVariable(0.5, 1.5, 'b')
 
 x = [x0]
 names = ["x0"]
 for t in range(1, T):
     names.append("x{}".format(t))
-    x.append(NormalVariable(b*x[t-1], nu, names[t]))
+    x.append(NormalStandardVariable(b * x[t - 1], nu, names[t]))
 AR_model = ProbabilisticModel(x)
 
 # Generate data #
@@ -31,8 +31,8 @@ print("The true coefficient is: {}".format(float(true_b)))
 [xt.observe(data[xt][:, 0, :]) for xt in x]
 
 # Variational distribution #
-Qnu = LogNormalVariable(0.5, 1., "nu", learnable=True)
-Qb = BetaVariable(0.5, 0.5, "b", learnable=True)
+Qnu = LogNormalStandardVariable(0.5, 1., "nu", learnable=True)
+Qb = BetaStandardVariable(0.5, 0.5, "b", learnable=True)
 variational_posterior = ProbabilisticModel([Qb, Qnu])
 AR_model.set_posterior_model(variational_posterior)
 

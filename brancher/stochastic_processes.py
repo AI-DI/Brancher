@@ -5,13 +5,14 @@ Module description
 """
 
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 import operator
 
 import numpy as np
 
 from brancher.variables import Variable, PartialLink, ProbabilisticModel
 from brancher.time_series_models import TimeSeriesModel, LatentTimeSeriesModel
-from brancher.standard_variables import MultivariateNormalVariable, DeterministicVariable
+from brancher.standard_variables import MultivariateNormalStandardVariable, DeterministicStandardVariable
 from brancher.standard_variables import var2link
 from brancher.standard_variables import Process
 import brancher.functions as BF
@@ -28,6 +29,10 @@ class StochasticProcess(Process):
         self.has_observation_model = False
         self.observation_cond_dist = None
         self.active_submodel = None
+        self.active_posterior_submodel = None
+        self.posterior_process = None
+        self.posterior_parameters = None
+        self.has_observed_points = False
 
     def __call__(self, query_points): #This creates a finite-dimensional instance of the process
         instance = self.get_joint_instance(query_points)
@@ -36,11 +41,27 @@ class StochasticProcess(Process):
         if isinstance(instance, ProbabilisticModel) and self.has_posterior_instance:
             instance.set_posterior_model(self.active_submodel.posterior_model)
             if self.active_submodel.observed_submodel is not None:
-                observed_variables = [DeterministicVariable(value=var._observed_value[:, 0, :],
-                                                            name=var.name, is_observed=True)
+                observed_variables = [DeterministicStandardVariable(value=var._observed_value[:, 0, :],
+                                                                    name=var.name, is_observed=True)
                                       for var in self.active_submodel.observed_submodel.variables] #TODO: Work in progress with observed variables
                 instance.posterior_model.add_variables(observed_variables)
         return instance
+
+    def set_posterior_model(self, process, parameters=[]):
+        assert isinstance(process, (ProbabilisticModel, StochasticProcess)), "The posterior model of as tochastic process should be either a StochasticProcess or a ProbabilisticModel"
+        self.posterior_process = process
+        if isinstance(parameters, list) and all([isinstance(param, Variable) for param in parameters]):
+            self.posterior_parameters = ProbabilisticModel(parameters)
+        elif isinstance(parameters, ProbabilisticModel):
+            self.posterior_parameters = parameters
+        else:
+            raise ValueError("The posterior parameters should be either a list of variables or a probabilistic model")
+        if self.has_observed_points:
+            self.update_posterior_submodel()
+
+    @abstractmethod
+    def update_posterior_submodel(self):
+        pass
 
     def attach_observation_model(self, observation_cond_dist):
         self.observation_cond_dist = observation_cond_dist
@@ -125,9 +146,9 @@ class GaussianProcess(ContinuousStochasticProcess):
 
     def get_joint_instance(self, query_points):
         x = var2link(query_points)
-        return MultivariateNormalVariable(loc=self.mean_function(x),
-                                          covariance_matrix=self.covariance_function(x),
-                                          name=self.name + "(" + query_points.name + ")")
+        return MultivariateNormalStandardVariable(loc=self.mean_function(x),
+                                                  covariance_matrix=self.covariance_function(x),
+                                                  name=self.name + "(" + query_points.name + ")")
 
     def _construct_observed_model(self, observation_variables, instance):
         return ProbabilisticModel(observation_variables)
@@ -276,14 +297,31 @@ class DiscreteTimeSeries(DiscreteStochasticProcess):
     def observe(self, data, query_points):
         assert len(data) == len(query_points), "The number of datapoints should be equal to the number of query points"
         data = pandas_frame2timeseries_data(data)
-        self.active_submodel = self(query_points)
+        self.active_submodel = self(self._complete_query(query_points))
+        self.active_submodel.query_points = query_points
+        self.has_observed_points = True
 
         if self.has_observation_model:
-            variables_to_be_observed = self.active_submodel.observation_variables
+            active_variables = self.active_submodel.observation_variables
         else:
-            variables_to_be_observed = self.active_submodel.temporal_variables
+            active_variables = self.active_submodel.temporal_variables
 
+        variables_to_be_observed = [var for query_index, var in enumerate(active_variables)
+                                    if query_index in query_points]
+        assert len(variables_to_be_observed) == len(data)
         [var.observe(data_point) for var, data_point in zip(variables_to_be_observed, data)]
+        if self.posterior_process is not None:
+            self.update_posterior_submodel()
+
+    def update_posterior_submodel(self):
+        self.active_posterior_submodel = self.posterior_process(self._complete_query(self.active_submodel.query_points))
+        self.active_posterior_submodel.add_variables(self.posterior_parameters)
+        for var in self.active_posterior_submodel.variables:
+            try:
+                if self.active_submodel.get_variable(var.name).is_observed:
+                    var.name = var.name + "_hidden"
+            except KeyError:
+                pass
 
     def get_timeseries_sample(self, number_samples, query_points, input_values={}):
         multivariate_variable = self(query_points)
@@ -303,11 +341,18 @@ class DiscreteTimeSeries(DiscreteStochasticProcess):
                                      observation_variables=observation_variables,
                                      time_stamps=instance.time_stamps)
 
+    def _complete_query(self, query_points):
+        if isinstance(query_points, int):
+            query_points = range(query_points)
+        elif isinstance(query_points, Iterable) and all([isinstance(point, int) for point in query_points]):
+            query_points = range(max(query_points) + 1)
+        return query_points
+
 
 class MarkovProcess(DiscreteTimeSeries):
 
     def __init__(self, initial_values, cond_dist):
-        self.number_past_time_steps = cond_dist.__code__.co_argcount
+        self.number_past_time_steps = cond_dist.__code__.co_argcount - 1
         if isinstance(initial_values, Variable):
             assert self.number_past_time_steps == 1, "The conditional distribution cond_dist should have a single argument since a single initial_value was given"
             initial_values = tuple([initial_values])
@@ -324,9 +369,9 @@ class MarkovProcess(DiscreteTimeSeries):
             time_range = query_points
         variables = list(self.initial_value)
         for t in time_range:
-            if t >  self.number_past_time_steps - 1:
-                new_variable = self.cond_dist(*(variables[-self.number_past_time_steps:-1] + [variables[-1]]))
-                new_variable.name = new_variable.name + "_" + str(t)
+            if t > self.number_past_time_steps - 1:
+                new_variable = self.cond_dist(*([t] + variables[-self.number_past_time_steps:-1] + [variables[-1]]))
+                #new_variable.name = new_variable.name + "_" + str(t)
                 variables.append(new_variable)
         return TimeSeriesModel(variables, time_range)
 
