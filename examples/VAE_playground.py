@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from brancher.variables import RootVariable, ProbabilisticModel
-from brancher.standard_variables import NormalStandardVariable, EmpiricalStandardVariable, BinomialStandardVariable, DeterministicStandardVariable, LogNormalStandardVariable
+from brancher.standard_variables import NormalVariable, EmpiricalVariable, BinomialVariable, DeterministicVariable, LogNormalVariable
 from brancher import inference
 from brancher.inference import ReverseKL
 from brancher.gradient_estimators import Taylor1Estimator, PathwiseDerivativeEstimator, BlackBoxEstimator
@@ -68,15 +68,15 @@ encoder = BF.BrancherFunction(EncoderArchitecture(image_size=image_size, latent_
 decoder = BF.BrancherFunction(DecoderArchitecture(latent_size=latent_size, image_size=image_size))
 
 # Generative model
-z = NormalStandardVariable(np.zeros((latent_size,)), np.ones((latent_size,)), name="z")
-decoder_output = DeterministicStandardVariable(decoder(z), name="decoder_output")
-x = BinomialStandardVariable(total_count=1, logits=decoder_output["mean"], name="x")
+z = NormalVariable(np.zeros((latent_size,)), np.ones((latent_size,)), name="z")
+decoder_output = DeterministicVariable(decoder(z), name="decoder_output")
+x = BinomialVariable(total_count=1, logits=decoder_output["mean"], name="x")
 model = ProbabilisticModel([x, z])
 
 # Amortized variational distribution
-Qx = EmpiricalStandardVariable(dataset, batch_size=100, name="x", is_observed=True)
-encoder_output = DeterministicStandardVariable(encoder(Qx), name="encoder_output")
-Qz = NormalStandardVariable(encoder_output["mean"], encoder_output["sd"], name="z")
+Qx = EmpiricalVariable(dataset, batch_size=100, name="x", is_observed=True)
+encoder_output = DeterministicVariable(encoder(Qx), name="encoder_output")
+Qz = NormalVariable(encoder_output["mean"], encoder_output["sd"], name="z")
 model.set_posterior_model(ProbabilisticModel([Qx, Qz]))
 
 # Joint-contrastive inference

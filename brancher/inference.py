@@ -16,7 +16,7 @@ import torch
 from brancher.optimizers import ProbabilisticOptimizer
 from brancher.variables import Variable, ProbabilisticModel, Ensemble
 from brancher.stochastic_processes import StochasticProcess
-from brancher.standard_variables import DeterministicStandardVariable
+from brancher.standard_variables import DeterministicVariable
 from brancher.transformations import truncate_model
 from brancher.variables import RootVariable
 from brancher import gradient_estimators
@@ -51,9 +51,9 @@ def perform_inference(joint_model, number_iterations, number_samples = 1,
     if not inference_method:
         warnings.warn("The inference method was not specified, using the default reverse KL variational inference")
         inference_method = ReverseKL()
-    if not posterior_model and joint_model.posterior_model is not None:
+    if posterior_model is None and joint_model.posterior_model is not None:
         posterior_model = joint_model.posterior_model
-    else:
+    if posterior_model is None:
         posterior_model = inference_method.construct_posterior_model(joint_model)
     if not sampler_model: #TODO: clean up
         if not sampler_model:
@@ -137,7 +137,7 @@ class ReverseKL(InferenceMethod):
         pass #TODO: Check differentiability of the model
 
     def compute_loss(self, joint_model, posterior_model, sampler_model, number_samples, input_values={}):
-        loss = -joint_model.estimate_log_model_evidence(number_samples=number_samples,
+        loss = -joint_model.estimate_log_model_evidence(number_samples=number_samples, posterior_model=posterior_model,
                                                         method="ELBO", input_values=input_values,
                                                         for_gradient=True, gradient_estimator=self.gradient_estimator)
         return loss
@@ -288,14 +288,14 @@ class MAP(InferenceMethod):
 
     def construct_posterior_model(self, joint_model):
         test_sample = joint_model._get_sample(1, observed=False)
-        posterior_model = ProbabilisticModel([DeterministicStandardVariable(value[0, 0, :], variable.name, learnable=True)
+        posterior_model = ProbabilisticModel([DeterministicVariable(value[0, 0, :], variable.name, learnable=True)
                                               for variable, value in test_sample.items()
-                                              if (not variable.is_observed) and not isinstance(variable, (DeterministicStandardVariable, RootVariable))])
+                                              if (not variable.is_observed) and not isinstance(variable, (DeterministicVariable, RootVariable))])
         return posterior_model
 
     def check_model_compatibility(self, joint_model, posterior_model, sampler_model):
         # TODO: Check differentiability of the model
-        assert all([isinstance(var, (RootVariable, DeterministicStandardVariable)) for var in posterior_model.flatten()])
+        assert all([isinstance(var, (RootVariable, DeterministicVariable)) for var in posterior_model.flatten()])
 
     def compute_loss(self, joint_model, posterior_model, sampler_model, number_samples, input_values={}):
         empirical_samples = joint_model.observed_submodel._get_sample(1, observed=True)

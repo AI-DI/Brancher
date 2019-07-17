@@ -4,7 +4,7 @@ import numpy as np
 import torchvision
 
 from brancher.variables import RootVariable, ProbabilisticModel
-from brancher.standard_variables import NormalStandardVariable, CategoricalStandardVariable, EmpiricalStandardVariable, RandomIndices
+from brancher.standard_variables import NormalVariable, CategoricalVariable, EmpiricalVariable, RandomIndices
 from brancher import inference
 import brancher.functions as BF
 
@@ -20,24 +20,24 @@ output_labels = train.train_labels.numpy()
 # Data sampling model
 minibatch_size = 30
 minibatch_indices = RandomIndices(dataset_size=dataset_size, batch_size=minibatch_size, name="indices", is_observed=True)
-x = EmpiricalStandardVariable(input_variable, indices=minibatch_indices, name="x", is_observed=True)
-labels = EmpiricalStandardVariable(output_labels, indices=minibatch_indices, name="labels", is_observed=True)
+x = EmpiricalVariable(input_variable, indices=minibatch_indices, name="x", is_observed=True)
+labels = EmpiricalVariable(output_labels, indices=minibatch_indices, name="labels", is_observed=True)
 
 # Architecture parameters
 number_hidden_units = 20
-b1 = NormalStandardVariable(np.zeros((number_hidden_units, 1)),
-                            10 * np.ones((number_hidden_units, 1)), "b1")
-b2 = NormalStandardVariable(np.zeros((number_output_classes, 1)),
-                            10 * np.ones((number_output_classes, 1)), "b2")
-weights1 = NormalStandardVariable(np.zeros((number_hidden_units, number_pixels)),
-                                  10 * np.ones((number_hidden_units, number_pixels)), "weights1")
-weights2 = NormalStandardVariable(np.zeros((number_output_classes, number_hidden_units)),
-                                  10 * np.ones((number_output_classes, number_hidden_units)), "weights2")
+b1 = NormalVariable(np.zeros((number_hidden_units, 1)),
+                    10 * np.ones((number_hidden_units, 1)), "b1")
+b2 = NormalVariable(np.zeros((number_output_classes, 1)),
+                    10 * np.ones((number_output_classes, 1)), "b2")
+weights1 = NormalVariable(np.zeros((number_hidden_units, number_pixels)),
+                          10 * np.ones((number_hidden_units, number_pixels)), "weights1")
+weights2 = NormalVariable(np.zeros((number_output_classes, number_hidden_units)),
+                          10 * np.ones((number_output_classes, number_hidden_units)), "weights2")
 
 # Forward pass
 hidden_units = BF.tanh(BF.matmul(weights1, x) + b1)
 final_activations = BF.matmul(weights2, hidden_units) + b2
-k = CategoricalStandardVariable(logits=final_activations, name="k")
+k = CategoricalVariable(logits=final_activations, name="k")
 
 # Probabilistic model
 model = ProbabilisticModel([k])
@@ -46,14 +46,14 @@ model = ProbabilisticModel([k])
 k.observe(labels)
 
 # Variational Model
-Qb1 = NormalStandardVariable(np.zeros((number_hidden_units, 1)),
-                             0.2 * np.ones((number_hidden_units, 1)), "b1", learnable=True)
-Qb2 = NormalStandardVariable(np.zeros((number_output_classes, 1)),
-                             0.2 * np.ones((number_output_classes, 1)), "b2", learnable=True)
-Qweights1 = NormalStandardVariable(np.zeros((number_hidden_units, number_pixels)),
-                                   0.2 * np.ones((number_hidden_units, number_pixels)), "weights1", learnable=True)
-Qweights2 = NormalStandardVariable(np.zeros((number_output_classes, number_hidden_units)),
-                                   0.2 * np.ones((number_output_classes, number_hidden_units)), "weights2", learnable=True)
+Qb1 = NormalVariable(np.zeros((number_hidden_units, 1)),
+                     0.2 * np.ones((number_hidden_units, 1)), "b1", learnable=True)
+Qb2 = NormalVariable(np.zeros((number_output_classes, 1)),
+                     0.2 * np.ones((number_output_classes, 1)), "b2", learnable=True)
+Qweights1 = NormalVariable(np.zeros((number_hidden_units, number_pixels)),
+                           0.2 * np.ones((number_hidden_units, number_pixels)), "weights1", learnable=True)
+Qweights2 = NormalVariable(np.zeros((number_output_classes, number_hidden_units)),
+                           0.2 * np.ones((number_output_classes, number_hidden_units)), "weights2", learnable=True)
 variational_model = ProbabilisticModel([Qb1, Qb2, Qweights1, Qweights2])
 model.set_posterior_model(variational_model)
 
@@ -67,9 +67,9 @@ inference.perform_inference(model,
 num_images = 500
 test_size = len(test)
 test_indices = RandomIndices(dataset_size=test_size, batch_size=1, name="test_indices", is_observed=True)
-test_images = EmpiricalStandardVariable(np.reshape(test.test_data.numpy(), newshape=(test.test_data.shape[0], number_pixels, 1)),
-                                        indices=test_indices, name="x_test", is_observed=True)
-test_labels = EmpiricalStandardVariable(test.test_labels.numpy(), indices=test_indices, name="labels", is_observed=True)
+test_images = EmpiricalVariable(np.reshape(test.test_data.numpy(), newshape=(test.test_data.shape[0], number_pixels, 1)),
+                                indices=test_indices, name="x_test", is_observed=True)
+test_labels = EmpiricalVariable(test.test_labels.numpy(), indices=test_indices, name="labels", is_observed=True)
 test_model = ProbabilisticModel([test_images, test_labels])
 
 s = 0

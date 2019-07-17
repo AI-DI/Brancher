@@ -2,15 +2,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from brancher.variables import ProbabilisticModel
-from brancher.standard_variables import BetaStandardVariable, BinomialStandardVariable
+from brancher.standard_variables import BetaVariable, BinomialVariable
 from brancher import inference
 from brancher.visualizations import plot_posterior
 
 
 # betaNormal/Binomial model
 number_tosses = 1
-p = BetaStandardVariable(1., 1., "p")
-k = BinomialStandardVariable(number_tosses, probs=p, name="k")
+p = BetaVariable(1., 1., "p")
+k = BinomialVariable(number_tosses, probs=p, name="k")
 model = ProbabilisticModel([k, p])
 
 # Generate data

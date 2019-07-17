@@ -1,14 +1,14 @@
 import matplotlib.pyplot as plt
 
 from brancher.variables import ProbabilisticModel
-from brancher.standard_variables import NormalStandardVariable, LogNormalStandardVariable
+from brancher.standard_variables import NormalVariable, LogNormalVariable
 
 from brancher.transformations import truncate_model
 from brancher.visualizations import plot_density
 
 # Normal model
-mu = NormalStandardVariable(0., 1., "mu")
-x = NormalStandardVariable(mu, 0.1, "x")
+mu = NormalVariable(0., 1., "mu")
+x = NormalVariable(mu, 0.1, "x")
 model = ProbabilisticModel([x])
 
 # decision rule

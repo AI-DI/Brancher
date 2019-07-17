@@ -2,9 +2,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from brancher.variables import ProbabilisticModel
-from brancher.standard_variables import NormalStandardVariable as Norm
-from brancher.standard_variables import LogNormalStandardVariable as LogNorm
-from brancher.standard_variables import DeterministicStandardVariable as Deterministic
+from brancher.standard_variables import NormalVariable as Norm
+from brancher.standard_variables import LogNormalVariable as LogNorm
+from brancher.standard_variables import DeterministicVariable as Deterministic
 from brancher import inference
 import brancher.functions as BF
 

@@ -1,24 +1,24 @@
 from brancher.variables import ProbabilisticModel
-from brancher.standard_variables import NormalStandardVariable, CauchyStandardVariable, LaplaceStandardVariable
+from brancher.standard_variables import NormalVariable, CauchyVariable, LaplaceVariable
 import numpy as np
 np.random.seed(0)
 
 dim = 1
-a = CauchyStandardVariable(loc=np.random.normal(0, 1, (dim, dim)),
-                           scale=2 + np.random.normal(0, 1, (dim, dim ))**2,
-                           name="a", learnable=True)
+a = CauchyVariable(loc=np.random.normal(0, 1, (dim, dim)),
+                   scale=2 + np.random.normal(0, 1, (dim, dim ))**2,
+                   name="a", learnable=True)
 
-b = CauchyStandardVariable(loc=np.random.normal(0, 1, (dim, dim)),
-                           scale=2 + np.random.normal(0, 1, (dim, dim ))**2,
-                           name="b", learnable=True)
+b = CauchyVariable(loc=np.random.normal(0, 1, (dim, dim)),
+                   scale=2 + np.random.normal(0, 1, (dim, dim ))**2,
+                   name="b", learnable=True)
 
-c = CauchyStandardVariable(loc=a + b,
-                           scale=1 + a**2,
-                           name="c", learnable=True)
+c = CauchyVariable(loc=a + b,
+                   scale=1 + a**2,
+                   name="c", learnable=True)
 
-d = CauchyStandardVariable(loc=c,
-                           scale=1 + b**2,
-                           name="d", learnable=True)
+d = CauchyVariable(loc=c,
+                   scale=1 + b**2,
+                   name="d", learnable=True)
 
 model = ProbabilisticModel([d])
 

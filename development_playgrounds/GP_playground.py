@@ -8,7 +8,7 @@ from brancher.stochastic_processes import GaussianProcess as GP
 from brancher.stochastic_processes import SquaredExponentialCovariance as SquaredExponential
 from brancher.stochastic_processes import ConstantMean
 from brancher.variables import RootVariable
-from brancher.standard_variables import NormalStandardVariable as Normal
+from brancher.standard_variables import NormalVariable as Normal
 from brancher import inference
 
 num_datapoints = 20

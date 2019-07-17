@@ -12,7 +12,7 @@ import numpy as np
 
 from brancher.variables import Variable, PartialLink, ProbabilisticModel
 from brancher.time_series_models import TimeSeriesModel, LatentTimeSeriesModel
-from brancher.standard_variables import MultivariateNormalStandardVariable, DeterministicStandardVariable
+from brancher.standard_variables import MultivariateNormalVariable, DeterministicVariable
 from brancher.standard_variables import var2link
 from brancher.standard_variables import Process
 import brancher.functions as BF
@@ -41,8 +41,8 @@ class StochasticProcess(Process):
         if isinstance(instance, ProbabilisticModel) and self.has_posterior_instance:
             instance.set_posterior_model(self.active_submodel.posterior_model)
             if self.active_submodel.observed_submodel is not None:
-                observed_variables = [DeterministicStandardVariable(value=var._observed_value[:, 0, :],
-                                                                    name=var.name, is_observed=True)
+                observed_variables = [DeterministicVariable(value=var._observed_value[:, 0, :],
+                                                            name=var.name, is_observed=True)
                                       for var in self.active_submodel.observed_submodel.variables] #TODO: Work in progress with observed variables
                 instance.posterior_model.add_variables(observed_variables)
         return instance
@@ -146,9 +146,9 @@ class GaussianProcess(ContinuousStochasticProcess):
 
     def get_joint_instance(self, query_points):
         x = var2link(query_points)
-        return MultivariateNormalStandardVariable(loc=self.mean_function(x),
-                                                  covariance_matrix=self.covariance_function(x),
-                                                  name=self.name + "(" + query_points.name + ")")
+        return MultivariateNormalVariable(loc=self.mean_function(x),
+                                          covariance_matrix=self.covariance_function(x),
+                                          name=self.name + "(" + query_points.name + ")")
 
     def _construct_observed_model(self, observation_variables, instance):
         return ProbabilisticModel(observation_variables)

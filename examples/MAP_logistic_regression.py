@@ -3,7 +3,7 @@ import numpy as np
 from sklearn import datasets
 
 from brancher.variables import RootVariable, ProbabilisticModel
-from brancher.standard_variables import NormalStandardVariable, CategoricalStandardVariable, EmpiricalStandardVariable, RandomIndices
+from brancher.standard_variables import NormalVariable, CategoricalVariable, EmpiricalVariable, RandomIndices
 import brancher.functions as BF
 
 from brancher import inference
@@ -25,16 +25,16 @@ output_labels = dataset["target"][ind[:dataset_size]].astype("int32")
 # Data sampling model
 minibatch_size = dataset_size
 minibatch_indices = RandomIndices(dataset_size=dataset_size, batch_size=minibatch_size, name="indices", is_observed=True)
-x = EmpiricalStandardVariable(input_variable, indices=minibatch_indices, name="x", is_observed=True)
-labels = EmpiricalStandardVariable(output_labels, indices=minibatch_indices, name="labels", is_observed=True)
+x = EmpiricalVariable(input_variable, indices=minibatch_indices, name="x", is_observed=True)
+labels = EmpiricalVariable(output_labels, indices=minibatch_indices, name="labels", is_observed=True)
 
 # Architecture parameters
-weights = NormalStandardVariable(np.zeros((number_output_classes, number_regressors)),
-                                 10 * np.ones((number_output_classes, number_regressors)), "weights")
+weights = NormalVariable(np.zeros((number_output_classes, number_regressors)),
+                         10 * np.ones((number_output_classes, number_regressors)), "weights")
 
 # Forward pass
 final_activations = BF.matmul(weights, x)
-k = CategoricalStandardVariable(logits=final_activations, name="k")
+k = CategoricalVariable(logits=final_activations, name="k")
 
 # Probabilistic model
 model = ProbabilisticModel([k])
@@ -62,10 +62,10 @@ plt.show()
 test_size = len(ind[dataset_size:])
 num_images = test_size*3
 test_indices = RandomIndices(dataset_size=test_size, batch_size=1, name="test_indices", is_observed=True)
-test_images = EmpiricalStandardVariable(dataset["data"][ind[dataset_size:], :].astype("float32"),
-                                        indices=test_indices, name="x_test", is_observed=True)
-test_labels = EmpiricalStandardVariable(dataset["target"][ind[dataset_size:]].astype("int32"),
-                                        indices=test_indices, name="labels", is_observed=True)
+test_images = EmpiricalVariable(dataset["data"][ind[dataset_size:], :].astype("float32"),
+                                indices=test_indices, name="x_test", is_observed=True)
+test_labels = EmpiricalVariable(dataset["target"][ind[dataset_size:]].astype("int32"),
+                                indices=test_indices, name="labels", is_observed=True)
 test_model = ProbabilisticModel([test_images, test_labels])
 
 

@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from brancher.variables import RootVariable, ProbabilisticModel
-from brancher.standard_variables import NormalStandardVariable, BinomialStandardVariable, MultivariateNormalStandardVariable
+from brancher.standard_variables import NormalVariable, BinomialVariable, MultivariateNormalVariable
 from brancher import inference
 import brancher.functions as BF
 
@@ -18,10 +18,10 @@ input_variable = np.concatenate((x1_input_variable, x2_input_variable), axis=0)
 labels = np.concatenate((x1_labels, x2_labels), axis=0)
 
 # Probabilistic model
-weights = NormalStandardVariable(np.zeros((1, number_regressors)), 0.5 * np.ones((1, number_regressors)), "weights")
+weights = NormalVariable(np.zeros((1, number_regressors)), 0.5 * np.ones((1, number_regressors)), "weights")
 x = RootVariable(input_variable, "x", is_observed=True)
 logit_p = BF.matmul(weights, x)
-k = BinomialStandardVariable(1, logits=logit_p, name="k")
+k = BinomialVariable(1, logits=logit_p, name="k")
 model = ProbabilisticModel([k])
 
 samples = model._get_sample(300)
@@ -30,9 +30,9 @@ samples = model._get_sample(300)
 k.observe(labels)
 
 # Variational Model
-Qweights = MultivariateNormalStandardVariable(loc=np.zeros((1, number_regressors)),
-                                              covariance_matrix=np.identity(number_regressors),
-                                              name="weights", learnable=True)
+Qweights = MultivariateNormalVariable(loc=np.zeros((1, number_regressors)),
+                                      covariance_matrix=np.identity(number_regressors),
+                                      name="weights", learnable=True)
 variational_model = ProbabilisticModel([Qweights])
 model.set_posterior_model(variational_model)
 

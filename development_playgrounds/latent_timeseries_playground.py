@@ -2,9 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from brancher.stochastic_processes import MarkovProcess
-from brancher.standard_variables import NormalStandardVariable as Normal
-from brancher.standard_variables import BetaStandardVariable as Beta
-from brancher.standard_variables import LogNormalStandardVariable as LogNormal
+from brancher.standard_variables import NormalVariable as Normal
+from brancher.standard_variables import BetaVariable as Beta
+from brancher.standard_variables import LogNormalVariable as LogNormal
 from brancher.inference import perform_inference
 from brancher.inference import ReverseKL
 

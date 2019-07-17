@@ -98,7 +98,7 @@ class StandardVariable(RandomVariable):
                 bias = RootVariable(0.,
                                     self.name + "_" + parameter_name + "_" + "bias",
                                     learnable, is_observed=self._observed)
-                mixing = RootVariable(0.,
+                mixing = RootVariable(5.,
                                       self.name + "_" + parameter_name + "_" + "mixing",
                                       learnable, is_observed=self._observed)
                 kwargs.update({parameter_name: ranges[parameter_name].forward_transform(BF.sigmoid(mixing)*value + (1 - BF.sigmoid(mixing))*bias, dim)})
@@ -126,7 +126,7 @@ class StandardVariable(RandomVariable):
             return self
 
 
-class EmpiricalStandardVariable(StandardVariable):
+class EmpiricalVariable(StandardVariable):
     """
     Summary
 
@@ -154,7 +154,7 @@ class EmpiricalStandardVariable(StandardVariable):
         self.distribution = distributions.EmpiricalDistribution(batch_size=batch_size, is_observed=is_observed)
 
 
-class RandomIndices(EmpiricalStandardVariable):
+class RandomIndices(EmpiricalVariable):
     """
     Summary
 
@@ -170,7 +170,7 @@ class RandomIndices(EmpiricalStandardVariable):
         return self.batch_size
 
 
-class DeterministicStandardVariable(StandardVariable): #TODO: Future refactor? Should Deterministic variables and deterministic node be different? (No probably not)
+class DeterministicVariable(StandardVariable): #TODO: Future refactor? Should Deterministic variables and deterministic node be different? (No probably not)
     """
     Summary
 
@@ -188,7 +188,7 @@ class DeterministicStandardVariable(StandardVariable): #TODO: Future refactor? S
         return self._get_sample(1)[self]
 
 
-class NormalStandardVariable(StandardVariable):
+class NormalVariable(StandardVariable):
     """
     Summary
 
@@ -204,7 +204,7 @@ class NormalStandardVariable(StandardVariable):
         self.distribution = distributions.NormalDistribution()
 
 
-class StudentTStandardVariable(StandardVariable):
+class StudentTVariable(StandardVariable):
     """
     Summary
 
@@ -221,7 +221,7 @@ class StudentTStandardVariable(StandardVariable):
         self.distribution = distributions.StudentTDistribution()
 
 
-class UniformStandardVariable(StandardVariable):
+class UniformVariable(StandardVariable):
     """
     Summary
 
@@ -237,7 +237,7 @@ class UniformStandardVariable(StandardVariable):
         self.distribution = distributions.UniformDistribution()
 
 
-class CauchyStandardVariable(StandardVariable):
+class CauchyVariable(StandardVariable):
     """
     Summary
 
@@ -253,7 +253,7 @@ class CauchyStandardVariable(StandardVariable):
         self.distribution = distributions.CauchyDistribution()
 
 
-class HalfCauchyStandardVariable(StandardVariable):
+class HalfCauchyVariable(StandardVariable):
     """
     Summary
 
@@ -268,7 +268,7 @@ class HalfCauchyStandardVariable(StandardVariable):
         self.distribution = distributions.HalfCauchyDistribution()
 
 
-class HalfNormalStandardVariable(StandardVariable):
+class HalfNormalVariable(StandardVariable):
     """
     Summary
 
@@ -283,7 +283,7 @@ class HalfNormalStandardVariable(StandardVariable):
         self.distribution = distributions.HalfNormalDistribution()
 
 
-class Chi2StandardVariable(StandardVariable):
+class Chi2Variable(StandardVariable):
     """
     Summary
 
@@ -298,7 +298,7 @@ class Chi2StandardVariable(StandardVariable):
         self.distribution = distributions.Chi2Distribution()
 
 
-class GumbelStandardVariable(StandardVariable):
+class GumbelVariable(StandardVariable):
     """
     Summary
 
@@ -314,7 +314,7 @@ class GumbelStandardVariable(StandardVariable):
         self.distribution = distributions.GumbelDistribution()
 
 
-class LaplaceStandardVariable(StandardVariable):
+class LaplaceVariable(StandardVariable):
     """
     Summary
 
@@ -330,7 +330,7 @@ class LaplaceStandardVariable(StandardVariable):
         self.distribution = distributions.LaplaceDistribution()
 
 
-class ExponentialStandardVariable(StandardVariable):
+class ExponentialVariable(StandardVariable):
     """
     Summary
 
@@ -345,7 +345,7 @@ class ExponentialStandardVariable(StandardVariable):
         self.distribution = distributions.ExponentialDistribution()
 
 
-class PoissonStandardVariable(StandardVariable):
+class PoissonVariable(StandardVariable):
     """
     Summary
 
@@ -360,7 +360,7 @@ class PoissonStandardVariable(StandardVariable):
         self.distribution = distributions.PoissonDistribution()
 
 
-class LogNormalStandardVariable(StandardVariable):
+class LogNormalVariable(StandardVariable):
     """
     Summary
 
@@ -391,7 +391,7 @@ class LogNormalStandardVariable(StandardVariable):
 #        self.distribution = distributions.LogitNormalDistribution()
 
 
-class BetaStandardVariable(StandardVariable):
+class BetaVariable(StandardVariable):
     """
     Summary
 
@@ -409,7 +409,7 @@ class BetaStandardVariable(StandardVariable):
         self.distribution = distributions.BetaDistribution()
 
 
-class BinomialStandardVariable(StandardVariable):
+class BinomialVariable(StandardVariable):
     """
     Summary
 
@@ -435,7 +435,7 @@ class BinomialStandardVariable(StandardVariable):
                              "logits needs to be provided as input")
 
 
-class NegativeBinomialStandardVariable(StandardVariable):
+class NegativeBinomialVariable(StandardVariable):
     """
     Summary
 
@@ -461,7 +461,7 @@ class NegativeBinomialStandardVariable(StandardVariable):
                              "logits needs to be provided as input")
 
 
-class BernoulliStandardVariable(StandardVariable):
+class BernoulliVariable(StandardVariable):
     """
     Summary
 
@@ -485,7 +485,7 @@ class BernoulliStandardVariable(StandardVariable):
                              "logits needs to be provided as input")
 
 
-class GeometricStandardVariable(StandardVariable):
+class GeometricVariable(StandardVariable):
     """
     Summary
 
@@ -509,7 +509,7 @@ class GeometricStandardVariable(StandardVariable):
                              "logits needs to be provided as input")
 
 
-class CategoricalStandardVariable(StandardVariable):
+class CategoricalVariable(StandardVariable):
     """
     Summary
 
@@ -548,7 +548,7 @@ class CategoricalStandardVariable(StandardVariable):
 #        self.distribution = distributions.ConcreteDistribution()
 
 
-class MultivariateNormalStandardVariable(StandardVariable):
+class MultivariateNormalVariable(StandardVariable):
     """
     Summary
 
@@ -584,7 +584,7 @@ class MultivariateNormalStandardVariable(StandardVariable):
                              "scale_tril needs to be provided as input")
 
 
-class DirichletStandardVariable(StandardVariable):
+class DirichletVariable(StandardVariable):
     """
     Summary
 

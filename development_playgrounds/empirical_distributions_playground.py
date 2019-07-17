@@ -5,7 +5,7 @@ import chainer.links as L
 import chainer.functions as F
 
 from brancher.variables import RootVariable, RandomVariable, ProbabilisticModel
-from brancher.standard_variables import NormalStandardVariable, EmpiricalStandardVariable, RandomIndices
+from brancher.standard_variables import NormalVariable, EmpiricalVariable, RandomIndices
 from brancher.functions import BrancherFunction
 import brancher.functions as BF
 
@@ -16,8 +16,8 @@ dataset1 = np.random.normal(0, 1, (dataset_size, number_dimensions))
 
 ## Variables ##
 indices = RandomIndices(dataset_size=dataset_size, batch_size=5, name="indices")
-a = EmpiricalStandardVariable(dataset1, indices=indices, name='a', is_observed=True)
-b = EmpiricalStandardVariable(dataset1, indices=indices, name='a', is_observed=True)
+a = EmpiricalVariable(dataset1, indices=indices, name='a', is_observed=True)
+b = EmpiricalVariable(dataset1, indices=indices, name='a', is_observed=True)
 
 model = ProbabilisticModel([a, b])
 

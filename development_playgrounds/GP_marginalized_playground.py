@@ -10,9 +10,9 @@ from brancher.stochastic_processes import WhiteNoiseCovariance as WhiteNoise
 from brancher.stochastic_processes import HarmonicCovariance as Harmonic
 from brancher.stochastic_processes import ConstantMean
 from brancher.variables import RootVariable
-from brancher.standard_variables import NormalStandardVariable as Normal
-from brancher.standard_variables import LogNormalStandardVariable as LogNormal
-from brancher.standard_variables import MultivariateNormalStandardVariable as MultivariateNormal
+from brancher.standard_variables import NormalVariable as Normal
+from brancher.standard_variables import LogNormalVariable as LogNormal
+from brancher.standard_variables import MultivariateNormalVariable as MultivariateNormal
 from brancher import inference
 from brancher.visualizations import plot_posterior
 import brancher.functions as BF

@@ -4,7 +4,7 @@ import chainer
 
 from brancher.variables import RootVariable, ProbabilisticModel
 from brancher.particle_inference_tools import VoronoiSet
-from brancher.standard_variables import EmpiricalStandardVariable, NormalStandardVariable, LogNormalStandardVariable
+from brancher.standard_variables import EmpiricalVariable, NormalVariable, LogNormalVariable
 from brancher import inference
 from brancher.inference import WassersteinVariationalGradientDescent as WVGD
 from brancher.visualizations import ensemble_histogram
@@ -12,14 +12,14 @@ from brancher.pandas_interface import reformat_sample_to_pandas
 
 # Model
 dimensionality = 1
-theta = NormalStandardVariable(loc=0., scale=2., name="theta")
-x = NormalStandardVariable(theta ** 2, scale=0.2, name="x")
+theta = NormalVariable(loc=0., scale=2., name="theta")
+x = NormalVariable(theta ** 2, scale=0.2, name="x")
 model = ProbabilisticModel([x, theta])
 
 # Generate data
 N = 3
 theta_real = 0.1
-x_real = NormalStandardVariable(theta_real ** 2, 0.2, "x")
+x_real = NormalVariable(theta_real ** 2, 0.2, "x")
 data = x_real._get_sample(number_samples=N)
 
 # Observe data
@@ -35,8 +35,8 @@ particles = [ProbabilisticModel([RootVariable(p, name="theta", learnable=True)])
              for p in initial_locations]
 
 # Importance sampling distributions
-variational_samplers = [ProbabilisticModel([NormalStandardVariable(loc=location, scale=0.2,
-                                                                   name="theta", learnable=True)])
+variational_samplers = [ProbabilisticModel([NormalVariable(loc=location, scale=0.2,
+                                                           name="theta", learnable=True)])
                         for location in initial_locations]
 
 # Inference

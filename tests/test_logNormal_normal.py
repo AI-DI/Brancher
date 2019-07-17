@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from brancher.variables import ProbabilisticModel
-from brancher.standard_variables import NormalStandardVariable, LaplaceStandardVariable, CauchyStandardVariable, LogNormalStandardVariable
+from brancher.standard_variables import NormalVariable, LaplaceVariable, CauchyVariable, LogNormalVariable
 from brancher import inference
 
 
@@ -14,12 +14,12 @@ from brancher import inference
 # Real model
 nu_real = 1.
 mu_real = -2.
-x_real = LaplaceStandardVariable(mu_real, nu_real, "x_real")
+x_real = LaplaceVariable(mu_real, nu_real, "x_real")
 
 # Normal model
-nu = LogNormalStandardVariable(0., 1., "nu")
-mu = NormalStandardVariable(0., 10., "mu")
-x = LaplaceStandardVariable(mu, nu, "x")
+nu = LogNormalVariable(0., 1., "nu")
+mu = NormalVariable(0., 10., "mu")
+x = LaplaceVariable(mu, nu, "x")
 model = ProbabilisticModel([x])
 
 # # Generate data
@@ -29,8 +29,8 @@ data = x_real._get_sample(number_samples=100)
 x.observe(data[x_real][:, 0, :])
 
 # Variational model
-Qnu = LogNormalStandardVariable(0., 1., "nu", learnable=True)
-Qmu = NormalStandardVariable(0., 1., "mu", learnable=True)
+Qnu = LogNormalVariable(0., 1., "nu", learnable=True)
+Qmu = NormalVariable(0., 1., "mu", learnable=True)
 model.set_posterior_model(ProbabilisticModel([Qmu, Qnu]))
 
 # Inference

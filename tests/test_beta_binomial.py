@@ -2,17 +2,17 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from brancher.variables import ProbabilisticModel
-from brancher.standard_variables import BetaStandardVariable, BinomialStandardVariable
+from brancher.standard_variables import BetaVariable, BinomialVariable
 from brancher import inference
 
 #Real model
 number_samples = 1
 p_real = 0.8
-k_real = BinomialStandardVariable(number_samples, probs=p_real, name="k")
+k_real = BinomialVariable(number_samples, probs=p_real, name="k")
 
 # betaNormal/Binomial model
-p = BetaStandardVariable(1., 1., "p")
-k = BinomialStandardVariable(number_samples, probs=p, name="k")
+p = BetaVariable(1., 1., "p")
+k = BinomialVariable(number_samples, probs=p, name="k")
 model = ProbabilisticModel([k])
 
 # Generate data
@@ -22,7 +22,7 @@ data = k_real._get_sample(number_samples=50)
 k.observe(data[k_real][:, 0, :])
 
 # Variational distribution
-Qp = BetaStandardVariable(1., 1., "p", learnable=True)
+Qp = BetaVariable(1., 1., "p", learnable=True)
 model.set_posterior_model(ProbabilisticModel([Qp]))
 
 # Inference
