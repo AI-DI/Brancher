@@ -294,6 +294,20 @@ class DiscreteTimeSeries(DiscreteStochasticProcess):
     def __init__(self):
         super().__init__()
 
+    @staticmethod
+    def _get_time_range(query_points):
+        assert isinstance(query_points, (
+        int, range, list)), "The input query_points of a Markov process should be an integer (time horizon), a list of consecutive integers or a range"
+        if isinstance(query_points, int):
+            time_range = range(0, query_points)
+        elif isinstance(query_points, list):
+            assert all([isinstance(point, int) for point in query_points]), "The query points contained in the list should be integers"
+            assert np.max(np.diff(query_points)) == 1, "The query points of a discrete time series should be consecutive"
+            time_range = query_points
+        else:
+            time_range = query_points
+        return time_range
+
     def observe(self, data, query_points):
         assert len(data) == len(query_points), "The number of datapoints should be equal to the number of query points"
         data = pandas_frame2timeseries_data(data)
@@ -362,14 +376,11 @@ class MarkovProcess(DiscreteTimeSeries):
         super().__init__()
 
     def get_joint_instance(self, query_points):
-        assert isinstance(query_points, (int, range)), "The input query_points of a Markov process should be either an integer (time horizon) or a range"
-        if isinstance(query_points, int):
-            time_range = range(0, query_points)
-        else:
-            time_range = query_points
+        time_range = self._get_time_range(query_points)
         variables = list(self.initial_value)
+        t0 = min(time_range)
         for t in time_range:
-            if t > self.number_past_time_steps - 1:
+            if t > t0 + self.number_past_time_steps - 1:
                 new_variable = self.cond_dist(*([t] + variables[-self.number_past_time_steps:-1] + [variables[-1]]))
                 #new_variable.name = new_variable.name + "_" + str(t)
                 variables.append(new_variable)
