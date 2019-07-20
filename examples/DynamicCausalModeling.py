@@ -29,8 +29,8 @@ y_series = [NormalVariable(0., 1., name="y_0")]
 for n, t in enumerate(time_range):
     x_new_mean = (1-dt*a)*x_series[-1] + dt*c*y_series[-1] + dt*e*deterministic_input[n]
     y_new_mean = (1-dt*b)*y_series[-1] + dt*d*x_series[-1]
-    x_series += [NormalVariable(x_new_mean, np.sqrt(dt)*xi, name="x_{}".format(n+1))]
-    y_series += [NormalVariable(y_new_mean, np.sqrt(dt)*chi, name="y_{}".format(n+1))]
+    x_series += [NormalVariable(x_new_mean, np.sqrt(dt) * xi, name="x_{}".format(n + 1))]
+    y_series += [NormalVariable(y_new_mean, np.sqrt(dt) * chi, name="y_{}".format(n + 1))]
 dynamic_causal_model = ProbabilisticModel([x_series[-1], y_series[-1]])
 
 # Run dynamics
@@ -49,7 +49,7 @@ Qa = LogNormalVariable(0., 0.5, name="a", learnable=True)
 Qb = LogNormalVariable(0., 0.5, name="b", learnable=True)
 Qc = NormalVariable(0., 0.1, name="c", learnable=True)
 Qd = NormalVariable(0., 0.1, name="d", learnable=True)
-Qe = NormalVariable(0.,5., name="e", learnable=True)
+Qe = NormalVariable(0., 5., name="e", learnable=True)
 Qxi = LogNormalVariable(0.1, 0.1, name="xi", learnable=True)
 Qchi = LogNormalVariable(0.1, 0.1, name="chi", learnable=True)
 variational_posterior = ProbabilisticModel([Qa, Qb, Qc, Qd, Qe, Qxi, Qchi])

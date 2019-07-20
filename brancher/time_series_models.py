@@ -45,5 +45,5 @@ class LatentTimeSeriesModel(TimeSeriesModel):
         assert isinstance(observation_variables, list) and all([isinstance(var, Variable) for var in
                                                                 temporal_variables]), "The input observation_variable should be a list of Brancher variables"
         self.observation_variables = observation_variables
-        super().__init__(temporal_variables, time_stamps)
+        super().__init__(observation_variables, time_stamps)
 

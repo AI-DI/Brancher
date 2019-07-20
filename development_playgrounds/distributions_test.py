@@ -31,7 +31,7 @@ print(h.get_sample(2))
 i = PoissonVariable(1, name="i")
 print(i.get_sample(2))
 
-j = StudentTVariable(1,0,1, name="j")
+j = StudentTVariable(1, 0, 1, name="j")
 print(j.get_sample(2))
 
 l = UniformVariable(1, 2, name="l")

@@ -41,15 +41,19 @@ def perform_inference(joint_model, number_iterations, number_samples = 1,
     ---------
     """
     if isinstance(joint_model, StochasticProcess):
-        joint_model = joint_model.active_submodel
+        posterior_submodel = joint_model.active_posterior_submodel
+        joint_submodel = joint_model.active_submodel
+        if joint_model.posterior_process is not None:
+            joint_submodel.set_posterior_model(posterior_submodel)
+        joint_model = joint_submodel
     if isinstance(joint_model, Variable):
         joint_model = ProbabilisticModel([joint_model])
     if not inference_method:
         warnings.warn("The inference method was not specified, using the default reverse KL variational inference")
         inference_method = ReverseKL()
-    if not posterior_model and joint_model.posterior_model is not None:
+    if posterior_model is None and joint_model.posterior_model is not None:
         posterior_model = joint_model.posterior_model
-    else:
+    if posterior_model is None:
         posterior_model = inference_method.construct_posterior_model(joint_model)
     if not sampler_model: #TODO: clean up
         if not sampler_model:
@@ -133,7 +137,7 @@ class ReverseKL(InferenceMethod):
         pass #TODO: Check differentiability of the model
 
     def compute_loss(self, joint_model, posterior_model, sampler_model, number_samples, input_values={}):
-        loss = -joint_model.estimate_log_model_evidence(number_samples=number_samples,
+        loss = -joint_model.estimate_log_model_evidence(number_samples=number_samples, posterior_model=posterior_model,
                                                         method="ELBO", input_values=input_values,
                                                         for_gradient=True, gradient_estimator=self.gradient_estimator)
         return loss
@@ -146,14 +150,7 @@ class ReverseKL(InferenceMethod):
         pass
 
     def construct_posterior_model(self, joint_model):
-        joint_model.update_latent_submodel()
-        latent_names = [var.name for var in joint_model.variables if not var.is_observed]
-        latent_submodel_names = [var.name for var in joint_model.latent_submodel.variables]
-        if set(latent_names) == set(latent_submodel_names):
-            #return copy.deepcopy(joint_model.latent_submodel) #TODO work in progress
-            raise NotImplementedError("The automatric construction of the variational posterior is not currently implemented.")
-        else:
-            raise ValueError("The variational model cannot be constructed automatically as the latent submodel does not contains all the variables")
+        raise ValueError("The variational model cannot be constructed automatically as the latent submodel does not contains all the variables")
 
 
 class WassersteinVariationalGradientDescent(InferenceMethod):

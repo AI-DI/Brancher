@@ -22,7 +22,7 @@ y_names = ["y0"]
 for t in range(1,T):
     x_names.append("x{}".format(t))
     y_names.append("y{}".format(t))
-    x.append(NormalVariable(b*x[t-1], driving_noise, x_names[t]))
+    x.append(NormalVariable(b * x[t - 1], driving_noise, x_names[t]))
     y.append(NormalVariable(x[t], measure_noise, y_names[t]))
 AR_model = ProbabilisticModel(x + y)
 
@@ -43,7 +43,7 @@ Qx = [NormalVariable(0., 1., 'x0', learnable=True)]
 Qx_mean = [RootVariable(0., 'x0_mean', learnable=True)]
 for t in range(1, T):
     Qx_mean.append(RootVariable(0., x_names[t] + "_mean", learnable=True))
-    Qx.append(NormalVariable(logit_b_post*Qx[t-1] + Qx_mean[t], 1., x_names[t], learnable=True))
+    Qx.append(NormalVariable(logit_b_post * Qx[t - 1] + Qx_mean[t], 1., x_names[t], learnable=True))
 variational_posterior = ProbabilisticModel([Qb] + Qx)
 AR_model.set_posterior_model(variational_posterior)
 

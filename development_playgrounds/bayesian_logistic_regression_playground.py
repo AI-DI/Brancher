@@ -18,7 +18,7 @@ input_variable = np.concatenate((x1_input_variable, x2_input_variable), axis=0)
 labels = np.concatenate((x1_labels, x2_labels), axis=0)
 
 # Probabilistic model
-weights = NormalVariable(np.zeros((1, number_regressors)), 0.5*np.ones((1, number_regressors)), "weights")
+weights = NormalVariable(np.zeros((1, number_regressors)), 0.5 * np.ones((1, number_regressors)), "weights")
 x = RootVariable(input_variable, "x", is_observed=True)
 logit_p = BF.matmul(weights, x)
 k = BinomialVariable(1, logits=logit_p, name="k")

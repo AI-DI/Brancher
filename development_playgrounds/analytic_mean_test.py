@@ -4,11 +4,11 @@ import numpy as np
 np.random.seed(0)
 
 dim = 1
-a = CauchyVariable(loc=np.random.normal(0, 1, (dim, dim )),
+a = CauchyVariable(loc=np.random.normal(0, 1, (dim, dim)),
                    scale=2 + np.random.normal(0, 1, (dim, dim ))**2,
                    name="a", learnable=True)
 
-b = CauchyVariable(loc=np.random.normal(0, 1, (dim, dim )),
+b = CauchyVariable(loc=np.random.normal(0, 1, (dim, dim)),
                    scale=2 + np.random.normal(0, 1, (dim, dim ))**2,
                    name="b", learnable=True)
 

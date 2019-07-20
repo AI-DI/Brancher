@@ -17,7 +17,7 @@ x = [x0]
 names = ["x0"]
 for t in range(1, T):
     names.append("x{}".format(t))
-    x.append(NormalVariable(b*x[t-1], nu, names[t]))
+    x.append(NormalVariable(b * x[t - 1], nu, names[t]))
 AR_model = ProbabilisticModel(x)
 
 # Generate data #

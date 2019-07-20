@@ -24,7 +24,7 @@ minibatch_size = 30
 minibatch_indices = RandomIndices(dataset_size=dataset_size, batch_size=minibatch_size, name="indices", is_observed=True)
 x = EmpiricalVariable(input_variable, indices=minibatch_indices, name="x", is_observed=True)
 labels = EmpiricalVariable(output_labels, indices=minibatch_indices, name="labels", is_observed=True)
-weights = NormalVariable(np.zeros((1, number_regressors)), 0.5*np.ones((1, number_regressors)), "weights")
+weights = NormalVariable(np.zeros((1, number_regressors)), 0.5 * np.ones((1, number_regressors)), "weights")
 logit_p = BF.matmul(weights, x)
 k = BinomialVariable(1, logits=logit_p, name="k")
 model = ProbabilisticModel([k])

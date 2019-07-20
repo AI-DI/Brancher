@@ -30,7 +30,7 @@ labels = EmpiricalVariable(output_labels, indices=minibatch_indices, name="label
 
 # Architecture parameters
 weights = NormalVariable(np.zeros((number_output_classes, number_regressors)),
-                         10*np.ones((number_output_classes, number_regressors)), "weights")
+                         10 * np.ones((number_output_classes, number_regressors)), "weights")
 
 # Forward pass
 final_activations = BF.matmul(weights, x)

@@ -21,7 +21,7 @@ y = RootVariable(y_mesh, name="y")
 w1 = NormalVariable(0., 1., name="w1")
 w2 = NormalVariable(0., 1., name="w2")
 b = NormalVariable(0., 1., name="b")
-experimental_input = NormalVariable(BF.exp(BF.sin(w1*x + w2*y + b)), 0.1, name="input", is_observed=True)
+experimental_input = NormalVariable(BF.exp(BF.sin(w1 * x + w2 * y + b)), 0.1, name="input", is_observed=True)
 
 # Probabilistic Model
 mu_x = NormalVariable(0., 1., name="mu_x")

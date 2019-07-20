@@ -26,13 +26,13 @@ labels = EmpiricalVariable(output_labels, indices=minibatch_indices, name="label
 # Architecture parameters
 number_hidden_units = 20
 b1 = NormalVariable(np.zeros((number_hidden_units, 1)),
-                    10*np.ones((number_hidden_units, 1)), "b1")
+                    10 * np.ones((number_hidden_units, 1)), "b1")
 b2 = NormalVariable(np.zeros((number_output_classes, 1)),
-                    10*np.ones((number_output_classes, 1)), "b2")
+                    10 * np.ones((number_output_classes, 1)), "b2")
 weights1 = NormalVariable(np.zeros((number_hidden_units, number_pixels)),
-                          10*np.ones((number_hidden_units, number_pixels)), "weights1")
+                          10 * np.ones((number_hidden_units, number_pixels)), "weights1")
 weights2 = NormalVariable(np.zeros((number_output_classes, number_hidden_units)),
-                          10*np.ones((number_output_classes, number_hidden_units)), "weights2")
+                          10 * np.ones((number_output_classes, number_hidden_units)), "weights2")
 
 # Forward pass
 hidden_units = BF.tanh(BF.matmul(weights1, x) + b1)
@@ -47,13 +47,13 @@ k.observe(labels)
 
 # Variational Model
 Qb1 = NormalVariable(np.zeros((number_hidden_units, 1)),
-                     0.2*np.ones((number_hidden_units, 1)), "b1", learnable=True)
+                     0.2 * np.ones((number_hidden_units, 1)), "b1", learnable=True)
 Qb2 = NormalVariable(np.zeros((number_output_classes, 1)),
-                     0.2*np.ones((number_output_classes, 1)), "b2", learnable=True)
+                     0.2 * np.ones((number_output_classes, 1)), "b2", learnable=True)
 Qweights1 = NormalVariable(np.zeros((number_hidden_units, number_pixels)),
-                           0.2*np.ones((number_hidden_units, number_pixels)), "weights1", learnable=True)
+                           0.2 * np.ones((number_hidden_units, number_pixels)), "weights1", learnable=True)
 Qweights2 = NormalVariable(np.zeros((number_output_classes, number_hidden_units)),
-                           0.2*np.ones((number_output_classes, number_hidden_units)), "weights2", learnable=True)
+                           0.2 * np.ones((number_output_classes, number_hidden_units)), "weights2", learnable=True)
 variational_model = ProbabilisticModel([Qb1, Qb2, Qweights1, Qweights2])
 model.set_posterior_model(variational_model)
 
@@ -68,7 +68,7 @@ num_images = 500
 test_size = len(test)
 test_indices = RandomIndices(dataset_size=test_size, batch_size=1, name="test_indices", is_observed=True)
 test_images = EmpiricalVariable(np.reshape(test.test_data.numpy(), newshape=(test.test_data.shape[0], number_pixels, 1)),
-                           indices=test_indices, name="x_test", is_observed=True)
+                                indices=test_indices, name="x_test", is_observed=True)
 test_labels = EmpiricalVariable(test.test_labels.numpy(), indices=test_indices, name="labels", is_observed=True)
 test_model = ProbabilisticModel([test_images, test_labels])
 

@@ -28,7 +28,7 @@ labels = EmpiricalVariable(output_labels, indices=minibatch_indices, name="label
 
 # Architecture parameters
 weights = NormalVariable(np.zeros((number_output_classes, number_pixels)),
-                         10*np.ones((number_output_classes, number_pixels)), "weights")
+                         10 * np.ones((number_output_classes, number_pixels)), "weights")
 
 # Forward pass
 final_activations = BF.matmul(weights, x)
@@ -79,7 +79,7 @@ test_size = len(test)
 test_indices = RandomIndices(dataset_size=test_size, batch_size=1, name="test_indices", is_observed=True)
 test_images = EmpiricalVariable(np.array([np.reshape(image[0], newshape=(number_pixels, 1)) for image in test]).astype("float32"),
                                 indices=test_indices, name="x_test", is_observed=True)
-test_labels = EmpiricalVariable(np.array([image[1]*np.ones((1, 1))
+test_labels = EmpiricalVariable(np.array([image[1] * np.ones((1, 1))
                                           for image in test]).astype("int32"), indices=test_indices, name="labels", is_observed=True)
 test_model = ProbabilisticModel([test_images, test_labels])
 

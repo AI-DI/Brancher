@@ -13,13 +13,13 @@ from brancher.pandas_interface import reformat_sample_to_pandas
 # Model
 dimensionality = 1
 theta = NormalVariable(loc=0., scale=2., name="theta")
-x = NormalVariable(theta**2, scale=0.2, name="x")
+x = NormalVariable(theta ** 2, scale=0.2, name="x")
 model = ProbabilisticModel([x, theta])
 
 # Generate data
 N = 3
 theta_real = 0.1
-x_real = NormalVariable(theta_real**2, 0.2, "x")
+x_real = NormalVariable(theta_real ** 2, 0.2, "x")
 data = x_real._get_sample(number_samples=N)
 
 # Observe data

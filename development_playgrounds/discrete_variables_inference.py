@@ -10,7 +10,7 @@ from brancher.gradient_estimators import BlackBoxEstimator, Taylor1Estimator
 #Model
 z1 = BernulliVariable(logits=0., name="z1")
 z2 = BernulliVariable(logits=0., name="z2")
-y = NormalVariable(2*z1 + z2, 1., name="y")
+y = NormalVariable(2 * z1 + z2, 1., name="y")
 model = ProbabilisticModel([y])
 
 #Generate data
