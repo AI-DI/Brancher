@@ -1,10 +1,24 @@
+from codecs import open
+from os.path import join
+import re
 from setuptools import setup, find_packages
+
+def get_version():
+    versionfile = join('brancher', '__init__.py')
+    lines = open(versionfile, 'rt').readlines()
+    version_regex = r"^__version__ = ['\"]([^'\"]*)['\"]"
+    for line in lines:
+        mo = re.search(version_regex, line, re.M)
+        if mo:
+            return mo.group(1)
+    raise RuntimeError('Unable to find version in %s.' % (versionfile,))
+
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setup(name='brancher',
-      version='0.3.5',
+      version=get_version(),
       description='A user-centered Python package for differentiable probabilistic inference',
       author='Brancher development team',
       author_email='info@brancher.org',
