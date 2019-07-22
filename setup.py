@@ -4,7 +4,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setup(name='brancher',
-      version='0.3.0',
+      version='0.3.5',
       description='A user-centered Python package for differentiable probabilistic inference',
       author='Brancher development team',
       author_email='info@brancher.org',
