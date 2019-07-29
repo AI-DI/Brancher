@@ -100,12 +100,12 @@ for iteration in range(num_iterations):
         # Inference
         inference_method = WVGD(variational_samplers=variational_samplers,
                                 particles=particles,
-                                number_post_samples=1000,
+                                number_post_samples=500,
                                 biased=False)
         inference.perform_inference(model,
                                     inference_method=inference_method,
-                                    number_iterations=4000,
-                                    number_samples=10,
+                                    number_iterations=2000, #4000
+                                    number_samples=50, #10
                                     optimizer="Adam",
                                     lr=0.01,
                                     posterior_model=particles,
@@ -115,11 +115,14 @@ for iteration in range(num_iterations):
         #plt.show()
 
         # ELBO
-        ELBO = model.posterior_model.estimate_log_model_evidence(number_samples=1000)
+        ELBO = model.posterior_model.estimate_log_model_evidence(number_samples=500)
         print("Iteration {}, #particles{}, ELBO{}".format(iteration,
                                                           num_particles,
                                                           ELBO))
-        particles_ELBO.append(float(ELBO.detach().numpy()))
+        try:
+            particles_ELBO.append(float(ELBO.detach().numpy()))
+        except TypeError:
+            particles_ELBO.append(float(ELBO.detach().cpu().numpy()))
     ELBO_list.append(particles_ELBO)
         # Test ELBO
         #ELBO_test = model.posterior_model.estimate_log_model_evidence(number_samples=3000)

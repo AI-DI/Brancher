@@ -248,10 +248,11 @@ class WassersteinVariationalGradientDescent(InferenceMethod):
                                                          for_gradient=False,
                                                          give_normalization=True)
             log_weights.append(logZ)
-        log_weights = np.array(log_weights)
-        alpha = np.max(log_weights)
-        un_weights = np.exp(log_weights - alpha)
-        self.weights = un_weights/np.sum(un_weights)
+        log_weights = torch.Tensor(log_weights)
+        alpha = log_weights.max()
+        un_weights = (log_weights - alpha).exp()
+        self.weights = (un_weights/un_weights.sum()).detach()
+        print(1)
         #joint_model.set_posterior_model(Ensemble(self.sampler_model, self.weights)) #TODO: Work in progress
 
     def set_posterior_model_after_inference(self, joint_model, posterior_model, sampler_model):
