@@ -956,13 +956,19 @@ class ProbabilisticModel(BrancherClass):
         Returns:
             List(brancher.Variable)
         """
+        input_variables = []
         for var in variables:
-            if not isinstance(var, (RootVariable, RandomVariable, ProbabilisticModel)):
+            if isinstance(var, (RootVariable, RandomVariable)):
+                input_variables.append(var)
+            elif isinstance(var, ProbabilisticModel):
+                [input_variables.append(model_var) for model_var in var.variables]
+            else:
                 raise ValueError("Invalid input type: {}".format(type(var)))
-        names = [var.name for var in variables]
+
+        names = [var.name for var in input_variables]
         if len(set(names)) != len(names):
             raise ValueError("The list of variables contains at least two variables with the same name")
-        return variables
+        return input_variables
 
     def _set_summary(self):
         """
@@ -1505,7 +1511,19 @@ class PosteriorModel(ProbabilisticModel):
     joint_model: brancher.ProbabilisticModel. The posterior model will map its variables to this model.
     """
     def __init__(self, posterior_model, joint_model):
-        super().__init__(posterior_model.variables)
+        if isinstance(posterior_model, ProbabilisticModel):
+            variables = posterior_model.variables
+        elif isinstance(posterior_model, list):
+            variables = []
+            for var in posterior_model:
+                if isinstance(var, Variable):
+                    variables.append(var)
+                elif isinstance(var, ProbabilisticModel):
+                    [variables.append(model_var) for model_var in var.variables]
+                else:
+                    raise ValueError("Invalid input type: {}".format(type(var)))
+
+        super().__init__(variables)
         self.posterior_model = None
         self.model_mapping = get_model_mapping(self, joint_model)
         self._is_trained = False
@@ -1671,6 +1689,14 @@ class Ensemble(BrancherClass):
                                       differentiable=False)
         sample = reformat_sample_to_pandas(raw_sample)
         return sample
+
+    def estimate_log_model_evidence(self, number_samples, method="ELBO", input_values={},
+                                    for_gradient=False, posterior_model=(), gradient_estimator=None):
+        return sum([weight*model.estimate_log_model_evidence(number_samples,
+                                                             method=method, input_values=input_values,
+                                                             for_gradient=for_gradient, posterior_model=posterior_model,
+                                                             gradient_estimator=gradient_estimator)
+                    for model, weight in zip(self.model_list, self.weights)])
 
     def _get_statistic(self, query, input_values):
         raise NotImplemented

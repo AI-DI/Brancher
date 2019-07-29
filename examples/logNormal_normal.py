@@ -12,7 +12,7 @@ from brancher import inference
 nu = LogNormalVariable(0., 1., "nu")
 mu = NormalVariable(0., 10., "mu")
 x = NormalVariable(mu, nu, "x")
-model = ProbabilisticModel([x]) # to fix plot_posterior (flatten automatically?)
+model = ProbabilisticModel([x])
 
 # # Generate data
 nu_real = 1.
