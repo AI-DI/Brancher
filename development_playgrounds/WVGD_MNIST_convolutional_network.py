@@ -1,3 +1,7 @@
+import brancher.config as cfg
+cfg.set_device('gpu')
+print(cfg.device)
+
 import numpy as np
 import matplotlib.pyplot as plt
 

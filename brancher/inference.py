@@ -186,8 +186,8 @@ class WassersteinVariationalGradientDescent(InferenceMethod):
             reassigned_particles = [reassign_samples(p._get_sample(num_samples), source_model=p, target_model=dic)
                                     for p in particles]
 
-            statistics = [self.deviation_statistics([self.cost_function(value_pair[0].detach().numpy(),
-                                                                        value_pair[1].detach().numpy())
+            statistics = [self.deviation_statistics([self.cost_function(value_pair[0].detach().cpu().numpy(),
+                                                                        value_pair[1].detach().cpu().numpy())
                                                      for var, value_pair in zip_dict(dic, p).items()])
                           for p in reassigned_particles]
             return np.array(statistics).transpose()

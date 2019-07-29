@@ -1411,16 +1411,16 @@ class ProbabilisticModel(BrancherClass):
                                                                  empirical_samples=empirical_samples,
                                                                  for_gradient=for_gradient,
                                                                  normalized=False)
-        log_weights = (p_log_prob - q_log_prob).detach().numpy()
-        alpha = np.max(log_weights)
+        log_weights = (p_log_prob - q_log_prob)
+        alpha = log_weights.max()
         norm_log_weights = log_weights - alpha
-        weights = np.exp(norm_log_weights)
-        norm = np.sum(weights)
+        weights = norm_log_weights.exp()
+        norm = weights.sum()
         weights /= norm
         if not give_normalization:
-            return weights
+            return weights.detach()
         else:
-            return weights, np.log(norm) + alpha
+            return weights.detach(), (norm.log() + alpha).detach()
 
     def estimate_log_model_evidence(self, number_samples, method="ELBO", input_values={},
                                     for_gradient=False, posterior_model=(), gradient_estimator=None):
