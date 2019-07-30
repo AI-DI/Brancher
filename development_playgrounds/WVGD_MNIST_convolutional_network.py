@@ -43,7 +43,7 @@ for iteration in range(num_iterations):
         output_labels_test = test.test_labels.numpy()[test_indices]
 
         # Data sampling model
-        minibatch_size = 50
+        minibatch_size = 30
         minibatch_indices = RandomIndices(dataset_size=dataset_size, batch_size=minibatch_size,
                                           name="indices", is_observed=True)
         x = EmpiricalVariable(input_variable, indices=minibatch_indices,
@@ -62,14 +62,14 @@ for iteration in range(num_iterations):
         out_channels = 10
         image_size = 28
         Wk = NormalVariable(loc=np.zeros((out_channels, in_channels, 2, 2)),
-                            scale=np.ones((out_channels, in_channels, 2, 2)),
+                            scale=10*np.ones((out_channels, in_channels, 2, 2)),
                             name="Wk")
         z = DeterministicVariable(BF.mean(BF.relu(BF.conv2d(x, Wk, stride=1)), (2, 3)), name="z")
         Wl = NormalVariable(loc=np.zeros((num_classes, out_channels)),
-                            scale=np.ones((num_classes, out_channels)),
+                            scale=10*np.ones((num_classes, out_channels)),
                             name="Wl")
         b = NormalVariable(loc=np.zeros((num_classes, 1)),
-                           scale=np.ones((num_classes, 1)),
+                           scale=10*np.ones((num_classes, 1)),
                            name="b")
         reshaped_z = BF.reshape(z, shape=(out_channels, 1))
         k = CategoricalVariable(logits=BF.linear(reshaped_z, Wl, b),
@@ -101,18 +101,17 @@ for iteration in range(num_iterations):
         inference_method = WVGD(variational_samplers=variational_samplers,
                                 particles=particles,
                                 number_post_samples=500,
-                                biased=False)
+                                biased=True)
         inference.perform_inference(model,
                                     inference_method=inference_method,
-                                    number_iterations=2000, #4000
-                                    number_samples=50, #10
+                                    number_iterations=1500, #4000
+                                    number_samples=20, #10
                                     optimizer="Adam",
-                                    lr=0.01,
+                                    lr=0.05,
                                     posterior_model=particles,
                                     pretraining_iterations=0)
         loss_list = model.diagnostics["loss curve"]
         plt.plot(loss_list)
-        #plt.show()
 
         # ELBO
         ELBO = model.posterior_model.estimate_log_model_evidence(number_samples=500)
@@ -124,76 +123,3 @@ for iteration in range(num_iterations):
         except TypeError:
             particles_ELBO.append(float(ELBO.detach().cpu().numpy()))
     ELBO_list.append(particles_ELBO)
-        # Test ELBO
-        #ELBO_test = model.posterior_model.estimate_log_model_evidence(number_samples=3000)
-        #x.observe(x_test)
-        #k.observe(labels_test)
-        #print("Test data. Iteration {}, #particles{}, ELBO{}".format(iteration,
-                                                          #num_particles,
-                                                          #model.posterior_model.estimate_log_model_evidence(
-                                                              #number_samples=3000)))
-
-# # Local variational models
-# plt.plot(loss_list)
-# plt.show()
-#
-# # Test accuracy
-# num_images = 2000
-# test_size = len(test)
-# test_indices = RandomIndices(dataset_size=test_size, batch_size=1, name="test_indices", is_observed=True)
-# test_images = EmpiricalVariable(np.array([np.reshape(image[0], newshape=(number_pixels, 1)) for image in test]).astype("float32"),
-#                                 indices=test_indices, name="x_test", is_observed=True)
-# test_labels = EmpiricalVariable(np.array([image[1] * np.ones((1, 1))
-#                                           for image in test]).astype("int32"), indices=test_indices, name="labels", is_observed=True)
-# test_model = ProbabilisticModel([test_images, test_labels])
-#
-# s = 0
-# model.set_posterior_model(variational_samplers[0])
-# scores_0 = []
-#
-# test_image_list = []
-# test_label_list = []
-# for _ in range(num_images):
-#     test_sample = test_model._get_sample(1)
-#     test_image, test_label = test_sample[test_images], test_sample[test_labels]
-#     test_image_list.append(test_image)
-#     test_label_list.append(test_label)
-#
-# for test_image, test_label in zip(test_image_list,test_label_list):
-#     model_output = np.reshape(np.mean(model._get_posterior_sample(10, input_values={x: test_image})[k].data, axis=0), newshape=(10,))
-#     output_label = int(np.argmax(model_output))
-#     scores_0.append(1 if output_label == int(test_label.data) else 0)
-#     s += 1 if output_label == int(test_label.data) else 0
-# print("Accuracy 0: {} %".format(100*s/float(num_images)))
-#
-# s = 0
-# model.set_posterior_model(variational_samplers[1])
-# scores_1 = []
-# for test_image, test_label in zip(test_image_list,test_label_list):
-#     model_output = np.reshape(np.mean(model._get_posterior_sample(10, input_values={x: test_image})[k].data, axis=0), newshape=(10,))
-#     output_label = int(np.argmax(model_output))
-#     scores_1.append(1 if output_label == int(test_label.data) else 0)
-#     s += 1 if output_label == int(test_label.data) else 0
-# print("Accuracy 1: {} %".format(100*s/float(num_images)))
-#
-# s = 0
-# scores_ne = []
-# for test_image, test_label in zip(test_image_list,test_label_list):
-#
-#     model.set_posterior_model(variational_samplers[0])
-#     model_output0 = np.reshape(np.mean(model._get_posterior_sample(10, input_values={x: test_image})[k].data, axis=0), newshape=(10,))
-#
-#     model.set_posterior_model(variational_samplers[1])
-#     model_output1 = np.reshape(np.mean(model._get_posterior_sample(10, input_values={x: test_image})[k].data, axis=0), newshape=(10,))
-#
-#     model_output = 0.5*(model_output0 + model_output1)
-#
-#     output_label = int(np.argmax(model_output))
-#     scores_ne.append(1 if output_label == int(test_label.data) else 0)
-#     s += 1 if output_label == int(test_label.data) else 0
-# print("Accuracy Naive Ensemble: {} %".format(100*s/float(num_images)))
-#
-# corr = np.corrcoef(scores_0, scores_1)[0,1]
-# print("Correlation: {}".format(corr))
-#
-# print("TO DO")

@@ -229,10 +229,14 @@ class WassersteinVariationalGradientDescent(InferenceMethod):
                                    for samples, sampler, particle in zip(samples_list, sampler_model, particle_list)]
         pair_list = [zip_dict(particle._get_sample(1), samples)
                      for particle, samples in zip(particle_list, reassigned_samples_list)]
-
-        particle_loss = sum([torch.sum(to_tensor(w)*self.deviation_statistics([self.cost_function(value_pair[0], value_pair[1].detach()) #TODO: numpy()
-                                                                for var, value_pair in particle.items()]))
-                             for particle, w in zip(pair_list, importance_weights)])
+        if not self.biased:
+            particle_loss = sum([torch.sum(to_tensor(w)*self.deviation_statistics([self.cost_function(value_pair[0], value_pair[1].detach()) #TODO: numpy()
+                                                                    for var, value_pair in particle.items()]))
+                                 for particle, w in zip(pair_list, importance_weights)])
+        else:
+            particle_loss = sum([torch.sum(self.deviation_statistics([self.cost_function(value_pair[0], value_pair[1].detach())
+                                                                      for var, value_pair in particle.items()]))
+                                 for particle in pair_list])
         return particle_loss
 
     def correct_gradient(self, joint_model, posterior_model, sampler_model, number_samples, input_values={}):
