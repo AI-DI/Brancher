@@ -19,7 +19,7 @@ class Process(ABC):
         pass
 
 
-class LinkConstructor(nn.ModuleList):
+class Link(nn.ModuleList):
     """
     Summary
 
@@ -63,7 +63,7 @@ class StandardVariable(RandomVariable):
             self.construct_biases(learnable, ranges, kwargs)
         self.construct_deterministic_parents(learnable, ranges, kwargs)
         self.parents = join_sets_list([var2link(x).vars for x in kwargs.values()])
-        self.link = LinkConstructor(**kwargs)
+        self.link = Link(**kwargs)
         self.ancestors = join_sets_list([self.parents] + [parent.ancestors for parent in self.parents])
         self.samples = None
         self.ranges = {}
