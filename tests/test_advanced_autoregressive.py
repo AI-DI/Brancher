@@ -1,4 +1,3 @@
-import chainer
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -12,7 +11,7 @@ T = 20
 driving_noise = 1.
 measure_noise = 0.5
 x0 = NormalVariable(0., driving_noise, 'x0')
-y0 = NormalVariable(x0, measure_noise, 'x0')
+y0 = NormalVariable(x0, measure_noise, 'y0')
 b = BetaVariable(0.5, 1., 'b')
 
 x = [x0]

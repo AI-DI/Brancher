@@ -103,7 +103,7 @@ def perform_inference(joint_model, number_iterations, number_samples = 1,
     inference_method.post_process(joint_model) #TODO: this could be implemented with a with block
 
     if joint_model.posterior_model is None and inference_method.learnable_posterior:
-        joint_model.set_posterior_model(posterior_model)
+        inference_method.set_posterior_model_after_inference(joint_model, posterior_model, sampler_model)
 
 
 class InferenceMethod(ABC):
@@ -152,6 +152,10 @@ class ReverseKL(InferenceMethod):
     def construct_posterior_model(self, joint_model):
         raise ValueError("The variational model cannot be constructed automatically as the latent submodel does not contains all the variables")
 
+    def set_posterior_model_after_inference(self, joint_model, posterior_model, sampler_model):
+        joint_model.set_posterior_model(posterior_model)
+
+
 
 class WassersteinVariationalGradientDescent(InferenceMethod):
 
@@ -182,8 +186,8 @@ class WassersteinVariationalGradientDescent(InferenceMethod):
             reassigned_particles = [reassign_samples(p._get_sample(num_samples), source_model=p, target_model=dic)
                                     for p in particles]
 
-            statistics = [self.deviation_statistics([self.cost_function(value_pair[0].detach().numpy(),
-                                                                        value_pair[1].detach().numpy())
+            statistics = [self.deviation_statistics([self.cost_function(value_pair[0].detach().cpu().numpy(),
+                                                                        value_pair[1].detach().cpu().numpy())
                                                      for var, value_pair in zip_dict(dic, p).items()])
                           for p in reassigned_particles]
             return np.array(statistics).transpose()
@@ -209,7 +213,7 @@ class WassersteinVariationalGradientDescent(InferenceMethod):
                             for subsampler in sampler_model])
         particle_loss = self.get_particle_loss(joint_model, posterior_model, sampler_model, number_samples,
                                                input_values)
-        return sampler_loss + particle_loss #10
+        return sampler_loss + particle_loss
 
     def get_particle_loss(self, joint_model, particle_list, sampler_model, number_samples, input_values):
         samples_list = [sampler._get_sample(number_samples, input_values=input_values, max_itr=1)
@@ -225,10 +229,14 @@ class WassersteinVariationalGradientDescent(InferenceMethod):
                                    for samples, sampler, particle in zip(samples_list, sampler_model, particle_list)]
         pair_list = [zip_dict(particle._get_sample(1), samples)
                      for particle, samples in zip(particle_list, reassigned_samples_list)]
-
-        particle_loss = sum([torch.sum(to_tensor(w)*self.deviation_statistics([self.cost_function(value_pair[0], value_pair[1].detach()) #TODO: numpy()
-                                                                for var, value_pair in particle.items()]))
-                             for particle, w in zip(pair_list, importance_weights)])
+        if not self.biased:
+            particle_loss = sum([torch.sum(to_tensor(w)*self.deviation_statistics([self.cost_function(value_pair[0], value_pair[1].detach()) #TODO: numpy()
+                                                                    for var, value_pair in particle.items()]))
+                                 for particle, w in zip(pair_list, importance_weights)])
+        else:
+            particle_loss = sum([torch.sum(self.deviation_statistics([self.cost_function(value_pair[0], value_pair[1].detach())
+                                                                      for var, value_pair in particle.items()]))
+                                 for particle in pair_list])
         return particle_loss
 
     def correct_gradient(self, joint_model, posterior_model, sampler_model, number_samples, input_values={}):
@@ -244,12 +252,17 @@ class WassersteinVariationalGradientDescent(InferenceMethod):
                                                          for_gradient=False,
                                                          give_normalization=True)
             log_weights.append(logZ)
-        log_weights = np.array(log_weights)
-        alpha = np.max(log_weights)
-        un_weights = np.exp(log_weights - alpha)
-        self.weights = un_weights/np.sum(un_weights)
+        log_weights = torch.Tensor(log_weights)
+        alpha = log_weights.max()
+        un_weights = (log_weights - alpha).exp()
+        self.weights = (un_weights/un_weights.sum()).detach()
+        print(1)
         #joint_model.set_posterior_model(Ensemble(self.sampler_model, self.weights)) #TODO: Work in progress
 
+    def set_posterior_model_after_inference(self, joint_model, posterior_model, sampler_model):
+        j_models = [copy.copy(joint_model) for _ in posterior_model]
+        [j_model.set_posterior_model(p_model) for j_model, p_model in zip(j_models, sampler_model)]
+        joint_model.posterior_model = Ensemble(j_models, weights=self.weights)
 
 class MaximumLikelihood(InferenceMethod):
 

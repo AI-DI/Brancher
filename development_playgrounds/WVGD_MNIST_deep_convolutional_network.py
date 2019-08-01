@@ -1,9 +1,8 @@
-import chainer
-import matplotlib.pyplot as plt
 import numpy as np
+import matplotlib.pyplot as plt
 
 from brancher.variables import RootVariable, ProbabilisticModel
-from brancher.standard_variables import NormalVariable, CategoricalVariable, EmpiricalVariable, RandomIndices
+from brancher.standard_variables import NormalVariable, DeterministicVariable, CategoricalVariable, EmpiricalVariable, RandomIndices
 from brancher import inference
 import brancher.functions as BF
 
@@ -12,45 +11,77 @@ from brancher import inference
 from brancher.inference import WassersteinVariationalGradientDescent as WVGD
 
 # Data
-number_pixels = 28*28
-number_output_classes = 10
-train, test = chainer.datasets.get_mnist()
-#dataset_size = len(train)
-dataset_size = 50
-input_variable = np.array([np.reshape(image[0], newshape=(number_pixels, 1)) for image in train][0:dataset_size]).astype("float32")
-output_labels = np.array([image[1]*np.ones((1, 1)) for image in train][0:dataset_size]).astype("int32")
+import torchvision
+
+# Data
+image_size = 28
+num_classes = 10
+train = torchvision.datasets.MNIST(root='./data', train=True, download=True, transform=None)
+test = torchvision.datasets.MNIST(root='./data', train=False, download=True, transform=None)
+dataset_size = 100 #len(train)
+input_variable = np.reshape(train.train_data.numpy()[:dataset_size,:], newshape=(dataset_size, 1, image_size, image_size))
+output_labels = train.train_labels.numpy()
 
 # Data sampling model
-minibatch_size = 10
-minibatch_indices = RandomIndices(dataset_size=dataset_size, batch_size=minibatch_size, name="indices", is_observed=True)
-x = EmpiricalVariable(input_variable, indices=minibatch_indices, name="x", is_observed=True)
-labels = EmpiricalVariable(output_labels, indices=minibatch_indices, name="labels", is_observed=True)
-
-# Architecture parameters
-weights = NormalVariable(np.zeros((number_output_classes, number_pixels)),
-                         10 * np.ones((number_output_classes, number_pixels)), "weights")
+minibatch_size = 7
+minibatch_indices = RandomIndices(dataset_size=dataset_size, batch_size=minibatch_size,
+                                  name="indices", is_observed=True)
+x = EmpiricalVariable(input_variable, indices=minibatch_indices,
+                      name="x", is_observed=True)
+labels = EmpiricalVariable(output_labels, indices=minibatch_indices,
+                           name="labels", is_observed=True)
 
 # Forward pass
-final_activations = BF.matmul(weights, x)
-k = CategoricalVariable(logits=final_activations, name="k")
+in_channels = 1
+out_channels1 = 10
+out_channels2 = 20
+image_size = 28
+Wk1 = NormalVariable(loc=np.zeros((out_channels1, in_channels, 3, 3)),
+                     scale=np.ones((out_channels1, in_channels, 3, 3)),
+                     name="Wk1")
+Wk2 = NormalVariable(loc=np.zeros((out_channels2, out_channels1, 3, 3)),
+                     scale=np.ones((out_channels2, out_channels1, 3, 3)),
+                     name="Wk2")
+z = DeterministicVariable(BF.mean(BF.conv2d(BF.relu(BF.conv2d(x, Wk1,
+                                                              stride=2,
+                                                              padding=0)), Wk2,
+                                            stride=2,
+                                            padding=0), (2, 3)), name="z")
+Wl = NormalVariable(loc=np.zeros((num_classes, out_channels2)),
+                    scale=np.ones((num_classes, out_channels2)),
+                    name="Wl")
+b = NormalVariable(loc=np.zeros((num_classes, 1)),
+                   scale=np.ones((num_classes, 1)),
+                   name="b")
+reshaped_z = BF.reshape(z, shape=(out_channels2, 1))
+k = CategoricalVariable(logits=BF.linear(reshaped_z, Wl, b),
+                name="k")
 
 # Probabilistic model
 model = ProbabilisticModel([k])
+samples = model.get_sample(10)
 
 # Observations
 k.observe(labels)
 
 # Variational model
-num_particles = 1 #10
-initial_locations = [np.random.normal(0., 1., (number_output_classes, 28*28))
-                     for _ in range(num_particles)]
-particles = [ProbabilisticModel([RootVariable(location, name="weights", learnable=True)])
-             for location in initial_locations]
+num_particles = 4 #10
+wk1_locations = [np.random.normal(0., 1., (out_channels1, in_channels, 3, 3)) for _ in range(num_particles)]
+wk2_locations = [np.random.normal(0., 1., (out_channels2, out_channels1, 3, 3)) for _ in range(num_particles)]
+wl_locations = [np.random.normal(0., 1., (num_classes, out_channels2)) for _ in range(num_particles)]
+b_locations = [np.random.normal(0., 1., (num_classes, 1)) for _ in range(num_particles)]
+particles = [ProbabilisticModel([RootVariable(wk1, name="Wk1", learnable=True),
+                                 RootVariable(wk2, name="Wk2", learnable=True),
+                                 RootVariable(wl, name="Wl", learnable=True),
+                                 RootVariable(b, name="b", learnable=True)])
+             for wk1, wk2, wl, b in zip(wk1_locations, wk2_locations, wl_locations, b_locations)]
 
 # Importance sampling distributions
-variational_samplers = [ProbabilisticModel([NormalVariable(loc=location, scale=0.1,
-                                                           name="weights", learnable=True)])
-                        for location in initial_locations]
+variational_samplers = [ProbabilisticModel([NormalVariable(wk1, 1 + 0*wk1, name="Wk1", learnable=True),
+                                            NormalVariable(wk2, 1 + 0*wk2, name="Wk2", learnable=True),
+                                            NormalVariable(wl, 1 + 0*wl, name="Wl", learnable=True),
+                                            NormalVariable(b, 1 + 0*b, name="b", learnable=True)])
+                        for wk1, wk2, wl, b in zip(wk1_locations, wk2_locations, wl_locations, b_locations)]
 
 # Inference
 inference_method = WVGD(variational_samplers=variational_samplers,
@@ -65,10 +96,11 @@ inference.perform_inference(model,
                             posterior_model=particles,
                             pretraining_iterations=0)
 loss_list = model.diagnostics["loss curve"]
-
+plt.plot(loss_list)
+#plt.show()
 
 # ELBO
-print(model.posterior_model.estimate_log_model_evidence(number_samples=10000))
+print("#particles{}, ELBO{}".format(num_particles, model.posterior_model.estimate_log_model_evidence(number_samples=10000)))
 
 # # Local variational models
 # plt.plot(loss_list)

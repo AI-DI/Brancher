@@ -26,9 +26,8 @@ data = x_real._get_sample(number_samples=N)
 x.observe(data[x_real][:, 0, :])
 
 # Variational model
-num_particles = 4
-initial_locations = [np.random.normal(0., 0.1)
-                     for _ in range(num_particles)]
+num_particles = 2
+initial_locations = [-2, 2]
 
 #initial_locations = [0, 0.1]
 particles = [ProbabilisticModel([RootVariable(p, name="theta", learnable=True)])
@@ -43,13 +42,13 @@ variational_samplers = [ProbabilisticModel([NormalVariable(loc=location, scale=0
 inference_method = WVGD(variational_samplers=variational_samplers,
                         particles=particles,
                         biased=False,
-                        number_post_samples=8000000)
+                        number_post_samples=80000)
 inference.perform_inference(model,
                             inference_method=inference_method,
-                            number_iterations=1000,
+                            number_iterations=1500,
                             number_samples=50,
-                            optimizer="SGD",
-                            lr=0.0001,
+                            optimizer="Adam",
+                            lr=0.005,
                             posterior_model=particles,
                             pretraining_iterations=0)
 loss_list = model.diagnostics["loss curve"]
@@ -58,18 +57,10 @@ loss_list = model.diagnostics["loss curve"]
 plt.plot(loss_list)
 plt.show()
 
-# Samples
-print(inference_method.weights)
-M = 8000
-samples = [reformat_sample_to_pandas(sampler._get_sample(M, max_itr=np.inf)) for sampler in inference_method.sampler_model]
-ensemble_histogram(samples,
-                   variable="theta",
-                   weights=inference_method.weights,
-                   bins=50)
-plt.show()
+#Plot posterior
+#from brancher.visualizations import plot_density
+#plot_density(model.posterior_model, variables=["theta"])
+#plt.show()
 
-#print([p.get_sample(1) for p in particles])
-#print(initial_locations)
-
-#samples = Qtheta.get_sample(50)
-#print(samples)
+# ELBO
+print(model.posterior_model.estimate_log_model_evidence(number_samples=10000))
