@@ -148,7 +148,7 @@ class StandardVariable(RandomVariable):
             None.
         """
         for parameter_name, value in kwargs.items():
-            if isinstance(value, (Variable, PartialLink)):
+            if isinstance(value, (Variable, PartialLink, np.ndarray, numbers.Number)):
                 if isinstance(value, np.ndarray):
                     dim = value.shape[0]
                 elif isinstance(value, numbers.Number):
