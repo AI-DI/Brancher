@@ -13,18 +13,24 @@ from brancher.utilities import join_sets_list
 
 ## Stochastic process base class ##
 class Process(ABC):
-
+    """
+    Process is the superclass of stochastic processes
+    """
     @abstractmethod
     def attach_observation_model(self, observation_cond_dist):
         pass
 
 
-class LinkConstructor(nn.ModuleList):
+class Link(nn.ModuleList):
     """
-    Summary
+    Links represent a dependency tree between variables. Links construct a pytorch module list from its arguments. When
+    called it returns the values from each variable given the input values.
 
     Parameters
     ----------
+    kwargs: Dictionary(str: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of
+    brancher.Variables and brancher.PartialLinks). String variable pairs where the variables are converted to partial
+    links.
     """
     def __init__(self, **kwargs):
         self.kwargs = kwargs
@@ -39,12 +45,34 @@ class LinkConstructor(nn.ModuleList):
 
 class StandardVariable(RandomVariable):
     """
-    Summary
+    Standard Variable superclass that constructs a variable or random process. The main purpose of this class is for the
+    user to be able to easily construct variables that depend on other variables and implicit deterministic variables.
 
     Parameters
     ----------
+    name: String. Name of this variable
+
+    learnable: Bool. Set true if this variable is learnable by inference.
+
+    ranges: Dictionary(str: brancher.GeometricRange). Dictionary of variable names and the ranges that apply on those
+    variables.
+
+    is_observed: Bool. Set true if this variable is observed.
+
+    has_bias: Bool. Set true if bias variables should be constructed.
+
+    **kwargs: Named variables list that define the input variables of this variable.
     """
-    def __new__(cls, *args, **kwargs): #TODO: This requires proper documentation
+    def __new__(cls, *args, **kwargs):
+        """
+        Method. Constructs a new StandardVariable or a Process if a Process is given as one of the arguments.
+
+        Args:
+            cls. Subclass of brancher.StandardVariable. The specific StandardVariable that needs to be initialized.
+
+        Returns:
+            brancher.StandardVariable or brancher.Process.
+        """
         var = super(StandardVariable, cls).__new__(cls)
         var.__init__(*args, **kwargs)
         return var._construct_variable_or_process()
@@ -63,7 +91,7 @@ class StandardVariable(RandomVariable):
             self.construct_biases(learnable, ranges, kwargs)
         self.construct_deterministic_parents(learnable, ranges, kwargs)
         self.parents = join_sets_list([var2link(x).vars for x in kwargs.values()])
-        self.link = LinkConstructor(**kwargs)
+        self.link = Link(**kwargs)
         self.ancestors = join_sets_list([self.parents] + [parent.ancestors for parent in self.parents])
         self.samples = None
         self.ranges = {}
@@ -74,6 +102,22 @@ class StandardVariable(RandomVariable):
         self.partial_links = {name: var2link(link) for name, link in kwargs.items()}
 
     def construct_deterministic_parents(self, learnable, ranges, kwargs):
+        """
+        Method. Constructs the deterministic variables for input variables that are numberic or numpy arrays. If a
+        variable is an instance of brancher.Variable or brancher.PartialLink these should already have deterministic
+        variables initialized.
+
+        Args:
+            learnable: Bool. Set true if the root variables should be learnable.
+
+            ranges: Dictionary(str: brancher.GeometricRange). Dictionary of variable names and the ranges that apply on
+            those variables.
+
+            kwargs: Named variables list that define the input variables of this variable.
+
+        Returns:
+            None.
+        """
         for parameter_name, value in kwargs.items():
             if not isinstance(value, (Variable, PartialLink)):
                 if isinstance(value, np.ndarray):
@@ -87,8 +131,24 @@ class StandardVariable(RandomVariable):
                 kwargs.update({parameter_name: ranges[parameter_name].forward_transform(deterministic_parent, dim)})
 
     def construct_biases(self, learnable, ranges, kwargs):
+        """
+        Method. Constructs a bias variable for each variable in the input. Bias variables are deterministic variables
+        that transform the input variables.
+
+        Args:
+            learnable: Bool. Set true if the biases should be learnable.
+
+            ranges: Dictionary(str: brancher.GeometricRange). Dictionary of variable names and the ranges that apply on
+            those variables.
+
+            kwargs: Named variables list that define the input variables of this variable. For each variable in here a
+            bias variable will be created.
+
+        Returns:
+            None.
+        """
         for parameter_name, value in kwargs.items():
-            if isinstance(value, (Variable, PartialLink)):
+            if isinstance(value, (Variable, PartialLink, np.ndarray, numbers.Number)):
                 if isinstance(value, np.ndarray):
                     dim = value.shape[0]
                 elif isinstance(value, numbers.Number):
@@ -104,6 +164,13 @@ class StandardVariable(RandomVariable):
                 kwargs.update({parameter_name: ranges[parameter_name].forward_transform(BF.sigmoid(mixing)*value + (1 - BF.sigmoid(mixing))*bias, dim)})
 
     def _check_for_stochastic_process_arguments(self):
+        """
+        Private method. Looks in the input variables to see if an input is a Process. If there is a process this
+        variable should also be a process. Throws an ValueError is there are more then one processes in the input.
+
+        Returns:
+            None.
+        """
         params = self._input
         process_params = [key for key, argument in params.items()
                           if isinstance(argument, Process)]
@@ -112,6 +179,13 @@ class StandardVariable(RandomVariable):
         return len(process_params) == 1
 
     def _construct_variable_or_process(self):
+        """
+        Private method. Checks if this variable should be a process or a standard variable. If it should be a process
+        a new process is constructed from the input variables.
+
+        Returns:
+            brancher.StandardVariable or brancher.Process.
+        """
         if self._check_for_stochastic_process_arguments():
             params = self._input
             process_params = [key for key, argument in params.items()

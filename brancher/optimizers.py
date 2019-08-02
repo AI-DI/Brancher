@@ -9,7 +9,7 @@ import copy
 
 import torch
 
-from brancher.standard_variables import LinkConstructor
+from brancher.standard_variables import Link
 from brancher.modules import ParameterModule, EmptyModule
 from brancher.variables import BrancherClass, Variable, ProbabilisticModel
 
@@ -36,7 +36,7 @@ class ProbabilisticOptimizer(ABC):
         variable_set = model.flatten() if isinstance(model, ProbabilisticModel) else model.ancestors
         for var in variable_set:
             link = var.link if hasattr(var, 'link') else None
-            if isinstance(link, (ParameterModule, LinkConstructor)):  # TODO: make sure that if user inputs nn.ModuleList, this works
+            if isinstance(link, (ParameterModule, Link)):  # TODO: make sure that if user inputs nn.ModuleList, this works
                 self.link_set.add(link)
 
     def add_variable2module(self, random_variable):
@@ -47,7 +47,7 @@ class ProbabilisticOptimizer(ABC):
         for link in self.link_set:
             if isinstance(link, ParameterModule):
                 self.module.append(link)
-            elif isinstance(link, LinkConstructor):
+            elif isinstance(link, Link):
                 [self.module.append(l) for l in link]
 
     def setup(self, model, optimizer, **kwargs):
