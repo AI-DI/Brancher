@@ -202,10 +202,20 @@ class StandardVariable(RandomVariable):
 
 class EmpiricalVariable(StandardVariable):
     """
-    Summary
+    Variable that represents samples from a dataset.
 
     Parameters
     ----------
+    dataset: np.ndarray or torch.Tensor. Dataset from which new samples come.
+
+    batchsize: number. The number of items from the dataset that are in each sample. If not given, batchsize if number
+    of indices.
+
+    indices: 1D np.array or List. The items of the dataset to return when sampled. If not given, samples are randomly
+    chosen.
+
+    weights: 1D np.array or List. Probabilities associated to each item in the dataset. If not given, items are
+    uniformly chosen.
     """
     def __init__(self, dataset, name, learnable=False, has_bias=False, is_observed=False, batch_size=None, indices=None, weights=None): #TODO: Ugly logic
         self._type = "Empirical"
@@ -230,10 +240,14 @@ class EmpiricalVariable(StandardVariable):
 
 class RandomIndices(EmpiricalVariable):
     """
-    Summary
+    Variable that represents random indices from a dataset. This can be used for random sampling from empirical variables.
 
     Parameters
     ----------
+    dataset_size: Number. Size of the dataset from which random indices will be sampled. Indices will be in the
+    range 0 to dataset_size.
+
+    batch_size: Number. Number of indices to generate per sample.
     """
     def __init__(self, dataset_size, batch_size, name, has_bias=False, is_observed=False):
         self._type = "Random Index"
@@ -246,10 +260,12 @@ class RandomIndices(EmpiricalVariable):
 
 class DeterministicVariable(StandardVariable): #TODO: Future refactor? Should Deterministic variables and deterministic node be different? (No probably not)
     """
-    Summary
+    Variable that represents a deterministic value.
 
     Parameters
     ----------
+    value: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of
+    brancher.Variables and brancher.PartialLinks. The value of this variable.
     """
     def __init__(self, value, name, learnable=False, has_bias=False, is_observed=False, variable_range=geometric_ranges.UnboundedRange()):
         self._type = "Deterministic node"
@@ -264,10 +280,15 @@ class DeterministicVariable(StandardVariable): #TODO: Future refactor? Should De
 
 class NormalVariable(StandardVariable):
     """
-    Summary
+    A normally distributed variable.
 
     Parameters
     ----------
+    loc: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of
+    brancher.Variables and brancher.PartialLinks. The location or mean or expected value of the normal variable.
+
+    scale: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of
+    brancher.Variables and brancher.PartialLinks. The scale or standard deviation of the normal variable.
     """
     def __init__(self, loc, scale, name, learnable=False, has_bias=False, is_observed=False):
         self._type = "Normal"
@@ -280,10 +301,18 @@ class NormalVariable(StandardVariable):
 
 class StudentTVariable(StandardVariable):
     """
-    Summary
+    A variable with a Student's t-distribution.
 
     Parameters
     ----------
+    loc: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of
+    brancher.Variables and brancher.PartialLinks. The location or mean of the Student-t variable.
+
+    scale: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of
+    brancher.Variables and brancher.PartialLinks. The scale of the Student-t variable.
+
+    df: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of
+    brancher.Variables and brancher.PartialLinks. The degrees of freedom of a Student-t variable.
     """
     def __init__(self, df, loc, scale, name, learnable=False, has_bias=False, is_observed=False):
         self._type = "StudentT"
@@ -297,10 +326,15 @@ class StudentTVariable(StandardVariable):
 
 class UniformVariable(StandardVariable):
     """
-    Summary
+    A variable with a uniform distribution.
 
     Parameters
     ----------
+    low: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of
+    brancher.Variables and brancher.PartialLinks. Minimum value of the uniform variable.
+
+    high: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of
+    brancher.Variables and brancher.PartialLinks. Maximum value of the uniform variable.
     """
     def __init__(self, low, high, name, learnable=False, has_bias=False, is_observed=False):
         self._type = "Uniform"
@@ -313,10 +347,15 @@ class UniformVariable(StandardVariable):
 
 class CauchyVariable(StandardVariable):
     """
-    Summary
+    A variable with a Cauchy distribution.
 
     Parameters
     ----------
+    loc: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of
+    brancher.Variables and brancher.PartialLinks. The mode or median of the Cauchy variable.
+
+    scale: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of
+    brancher.Variables and brancher.PartialLinks. The scale determines the half width at half maximum of the Cauchy variable.
     """
     def __init__(self, loc, scale, name, learnable=False, has_bias=False, is_observed=False):
         self._type = "Cauchy"
@@ -329,10 +368,12 @@ class CauchyVariable(StandardVariable):
 
 class HalfCauchyVariable(StandardVariable):
     """
-    Summary
+    A variable with a half Cauchy distribution.
 
     Parameters
     ----------
+    scale: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of
+    brancher.Variables and brancher.PartialLinks. The scale of the full Cauchy distribution.
     """
     def __init__(self, scale, name, learnable=False, has_bias=False, is_observed=False):
         self._type = "HalfCauchy"
@@ -344,10 +385,12 @@ class HalfCauchyVariable(StandardVariable):
 
 class HalfNormalVariable(StandardVariable):
     """
-    Summary
+    A variable with a half-normal distribution.
 
     Parameters
     ----------
+    scale: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of
+    brancher.Variables and brancher.PartialLinks. The scale of the full normal distribution.
     """
     def __init__(self, scale, name, learnable=False, has_bias=False, is_observed=False):
         self._type = "HalfNormal"
@@ -359,10 +402,12 @@ class HalfNormalVariable(StandardVariable):
 
 class Chi2Variable(StandardVariable):
     """
-    Summary
+    A variable with a Chi^2 distribution.
 
     Parameters
     ----------
+    df: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of
+    brancher.Variables and brancher.PartialLinks. The degrees of freedom of a Chi^2 variable.
     """
     def __init__(self, df, name, learnable=False, has_bias=False, is_observed=False):
         self._type = "Chi2"
@@ -374,10 +419,15 @@ class Chi2Variable(StandardVariable):
 
 class GumbelVariable(StandardVariable):
     """
-    Summary
+    A variable with a Gumbel distribution.
 
     Parameters
     ----------
+    loc: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of
+    brancher.Variables and brancher.PartialLinks. The location of the Gumbel variable.
+
+    scale: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of
+    brancher.Variables and brancher.PartialLinks. The scale of the Gumbel variable.
     """
     def __init__(self, loc, scale, name, learnable=False, has_bias=False, is_observed=False):
         self._type = "Gumbel"
@@ -390,10 +440,15 @@ class GumbelVariable(StandardVariable):
 
 class LaplaceVariable(StandardVariable):
     """
-    Summary
+    A variable with a Laplace distribution.
 
     Parameters
     ----------
+    loc: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of
+    brancher.Variables and brancher.PartialLinks. The location of the Laplace variable.
+
+    scale: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of
+    brancher.Variables and brancher.PartialLinks. The scale of the Laplace variable.
     """
     def __init__(self, loc, scale, name, learnable=False, has_bias=False, is_observed=False):
         self._type = "Laplace"
@@ -406,10 +461,12 @@ class LaplaceVariable(StandardVariable):
 
 class ExponentialVariable(StandardVariable):
     """
-    Summary
+    A variable with a exponential distribution.
 
     Parameters
     ----------
+    rate: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of
+    brancher.Variables and brancher.PartialLinks. The rate or inverse scale of the exponential variable.
     """
     def __init__(self, rate, name, learnable=False, has_bias=False, is_observed=False):
         self._type = "Exponential"
@@ -421,10 +478,12 @@ class ExponentialVariable(StandardVariable):
 
 class PoissonVariable(StandardVariable):
     """
-    Summary
+    A variable with a Poisson distribution.
 
     Parameters
     ----------
+    rate: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of
+    brancher.Variables and brancher.PartialLinks. The rate of the Poisson variable.
     """
     def __init__(self, rate, name, learnable=False, has_bias=False, is_observed=False):
         self._type = "Poisson"
@@ -436,10 +495,15 @@ class PoissonVariable(StandardVariable):
 
 class LogNormalVariable(StandardVariable):
     """
-    Summary
+    A variable with a log-normal distribution.
 
     Parameters
     ----------
+    loc: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of
+    brancher.Variables and brancher.PartialLinks. The mean of the log-normal variable.
+
+    scale: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of
+    brancher.Variables and brancher.PartialLinks. The standard deviation of the log-normal variable.
     """
     def __init__(self, loc, scale, name, learnable=False, has_bias=False, is_observed=False):
         self._type = "Log Normal"
@@ -467,10 +531,15 @@ class LogNormalVariable(StandardVariable):
 
 class BetaVariable(StandardVariable):
     """
-    Summary
+    A variable with a beta distribution.
 
     Parameters
     ----------
+    alpha: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of
+    brancher.Variables and brancher.PartialLinks. The alpha parameter of the beta distribution.
+
+    beta: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of
+    brancher.Variables and brancher.PartialLinks. The beta parameter of the beta distribution.
     """
     def __init__(self, alpha, beta, name, learnable=False, has_bias=False, is_observed=False):
         self._type = "Beta"
@@ -485,10 +554,19 @@ class BetaVariable(StandardVariable):
 
 class BinomialVariable(StandardVariable):
     """
-    Summary
+    A variable with a binomial distribution that represents a number of successes in a total_count number of
+    experiments. The chance of success is given with probability or logits.
 
     Parameters
     ----------
+    total_count: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of
+    brancher.Variables and brancher.PartialLinks. The number of experiments or trails with outcome success or failure.
+
+    probs: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of
+    brancher.Variables and brancher.PartialLinks. The probability of sampling a success.
+
+    logits: alpha: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of
+    brancher.Variables and brancher.PartialLinks. The log-odds of sampling a success.
     """
     def __init__(self, total_count, probs=None, logits=None, name="Binomial", learnable=False, has_bias=False, is_observed=False):
         self._type = "Binomial"
@@ -511,10 +589,19 @@ class BinomialVariable(StandardVariable):
 
 class NegativeBinomialVariable(StandardVariable):
     """
-    Summary
+    A variable with a negative binomial distribution that represents a number of success in a experiment until a
+    total_count number of failures has occured. The chance of success is given with probability or logits.
 
     Parameters
     ----------
+    total_count: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of
+    brancher.Variables and brancher.PartialLinks. The number of experiments with outcome failure.
+
+    probs: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of
+    brancher.Variables and brancher.PartialLinks. The probability of sampling a success.
+
+    logits: alpha: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of
+    brancher.Variables and brancher.PartialLinks. The log-odds of sampling a success.
     """
     def __init__(self, total_count, probs=None, logits=None, name="NegativeBinomial", learnable=False, has_bias=False, is_observed=False):
         self._type = "NegativeBinomial"
@@ -537,10 +624,16 @@ class NegativeBinomialVariable(StandardVariable):
 
 class BernoulliVariable(StandardVariable):
     """
-    Summary
+    A variable with a Bernoulli distribution that represents the result of a success/failure experiment. The chance of
+    success is given with probability or logits.
 
     Parameters
     ----------
+    probs: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of
+    brancher.Variables and brancher.PartialLinks. The probability of sampling a success.
+
+    logits: alpha: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of
+    brancher.Variables and brancher.PartialLinks. The log-odds of sampling a success.
     """
     def __init__(self, probs=None, logits=None, name="Bernoulli", learnable=False, has_bias=False, is_observed=False):
         self._type = "Bernoulli"
@@ -561,10 +654,16 @@ class BernoulliVariable(StandardVariable):
 
 class GeometricVariable(StandardVariable):
     """
-    Summary
+    A variable with a geometric distribution that represents the number of success/failure experiments that needed to be
+    done until a success outcome. The chance of success is given with probability or logits.
 
     Parameters
     ----------
+    probs: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of
+    brancher.Variables and brancher.PartialLinks. The probability of sampling a success.
+
+    logits: alpha: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of
+    brancher.Variables and brancher.PartialLinks. The log-odds of sampling a success.
     """
     def __init__(self, probs=None, logits=None, name="Geometric", learnable=False, has_bias=False, is_observed=False):
         self._type = "Geometric"
@@ -585,10 +684,15 @@ class GeometricVariable(StandardVariable):
 
 class CategoricalVariable(StandardVariable):
     """
-    Summary
+    A variable with a categorical distribution where the probabilities or logits need to be specified per category.
 
     Parameters
     ----------
+    probs: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of
+    brancher.Variables and brancher.PartialLinks. The probabilities of sampling a category.
+
+    logits: alpha: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of
+    brancher.Variables and brancher.PartialLinks. The log-odds of sampling a category.
     """
     def __init__(self, probs=None, logits=None, name="Categorical", learnable=False, has_bias=False, is_observed=False):
         self._type = "Categorical"
@@ -624,10 +728,23 @@ class CategoricalVariable(StandardVariable):
 
 class MultivariateNormalVariable(StandardVariable):
     """
-    Summary
+    A variable with a multivariate normal or gaussian distribution specified by a mean vector and either a positive
+    definite covariance matrix or a positive definite precision matrix or a lower-triangular matrix with a
+    positive-valued diagonal.
 
     Parameters
     ----------
+    loc: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of
+    brancher.Variables and brancher.PartialLinks. The location or mean vector of the multivariate-normal variable.
+
+    covariance_matrix: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of
+    brancher.Variables and brancher.PartialLinks. The positive-definite covariance matrix.
+
+    precision_matrix: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of
+    brancher.Variables and brancher.PartialLinks. The positive-definite precision matrix.
+
+    scale_tril: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of
+    brancher.Variables and brancher.PartialLinks. The lower-triangular factor of covariance, with positive-valued diagonal.
     """
     def __init__(self, loc, covariance_matrix=None, precision_matrix=None,
                  scale_tril=None, name="Multivariate Normal", learnable=False, has_bias=False, is_observed=False):
@@ -660,10 +777,12 @@ class MultivariateNormalVariable(StandardVariable):
 
 class DirichletVariable(StandardVariable):
     """
-    Summary
+    A variable with a Dirichlet distribution.
 
     Parameters
     ----------
+    concentration: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of
+    brancher.Variables and brancher.PartialLinks. The concentration parameter of the Dirichlet variable.
     """
     def __init__(self, concentration, name, learnable=False, has_bias=False, is_observed=False):
         self._type = "Dirichlet"
