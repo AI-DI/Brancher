@@ -93,8 +93,8 @@ class Distribution(ABC):
         self.check_parameters(**parameters)
         parameters, shape = self._preprocess_parameters_for_sampling(**parameters)
         pre_entropy = self._get_entropy(**parameters)
-        entropy = self._postprocess_sample(pre_entropy, shape)
-        return entropy
+        #entropy = self._postprocess_sample(pre_entropy, shape)
+        return pre_entropy
 
     def get_moments(self, center, order, **parameters):
         raise ValueError("The moment generating function is not implemented for this distribution")

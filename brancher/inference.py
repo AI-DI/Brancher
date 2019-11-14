@@ -266,11 +266,12 @@ class WassersteinVariationalGradientDescent(InferenceMethod):
 
 class MaximumLikelihood(InferenceMethod):
 
-    def __init__(self):
+    def __init__(self, gradient_estimator=gradient_estimators.PathwiseDerivativeEstimator):
         self.learnable_posterior = False
         self.learnable_model = True
         self.needs_sampler = False
         self.learnable_sampler = False
+        self.gradient_estimator = gradient_estimator
 
     def construct_posterior_model(self, joint_model):
         return None
@@ -281,8 +282,13 @@ class MaximumLikelihood(InferenceMethod):
 
     def compute_loss(self, joint_model, posterior_model, sampler_model, number_samples, input_values={}):
         empirical_samples = joint_model.observed_submodel._get_sample(1, observed=True)
-        loss = -joint_model.calculate_log_probability(empirical_samples, for_gradient=True)
-        return loss.sum()
+        #loss = -joint_model.calculate_log_probability(empirical_samples, for_gradient=True)
+        #return loss.sum()
+
+        function = lambda samples: -joint_model.calculate_log_probability(samples, for_gradient=True).sum()
+        estimator = self.gradient_estimator(function, joint_model, empirical_samples)
+        loss = estimator(number_samples)
+        return loss
 
     def correct_gradient(self, joint_model, posterior_model, sampler_model, number_samples, input_values={}):
         pass

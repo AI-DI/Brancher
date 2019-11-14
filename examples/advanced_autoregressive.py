@@ -49,7 +49,7 @@ AR_model.set_posterior_model(variational_posterior)
 
 # Inference #
 inference.perform_inference(AR_model,
-                            number_iterations=200,
+                            number_iterations=500,
                             number_samples=100,
                             optimizer='Adam',
                             lr=0.01)

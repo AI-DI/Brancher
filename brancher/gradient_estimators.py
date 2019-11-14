@@ -11,7 +11,7 @@ import torch
 
 from brancher.config import device
 from brancher.utilities import map_iterable
-from brancher.utilities import zip_dict_list
+from brancher.utilities import is_tensor
 
 
 class GradientEstimator(ABC):
@@ -54,3 +54,21 @@ class Taylor1Estimator(GradientEstimator):
             if not key in means:
                 means[key] = value
         return self.function(means).mean()
+
+# class Taylor2Estimator(GradientEstimator):
+#
+#     def __call__(self, n_samples, eps=0.001):
+#         observable_samples = self.sampler._get_sample(n_samples, differentiable=False)
+#         observable_samples.update(self.empirical_samples)
+#
+#         means = {var: var._get_mean(input_values=observable_samples)
+#                  for var in self.sampler.variables if not var.is_observed}
+#
+#         shift_means = {var: ((val + eps) if is_tensor(val) else val)
+#                        for var, val in means.items()}
+#
+#         for key, value in observable_samples.items():
+#             if not key in means:
+#                 means[key] = value
+#                 shift_means[key] = value
+#         return self.function(means).mean() + (self.function(shift_means).mean() - self.function(means).mean())/eps

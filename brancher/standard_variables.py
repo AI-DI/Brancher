@@ -765,7 +765,7 @@ class MultivariateNormalVariable(StandardVariable):
 
         elif scale_tril is None and covariance_matrix is None and precision_matrix is not None:
             ranges = {"loc": geometric_ranges.UnboundedRange(),
-                      "precision_matrix": geometric_ranges.UnboundedRange()}
+                      "precision_matrix": geometric_ranges.PositiveDefiniteMatrix()}
             super().__init__(name, loc=loc, precision_matrix=precision_matrix, learnable=learnable,
                              has_bias=has_bias, ranges=ranges, is_observed=is_observed)
             self.distribution = distributions.MultivariateNormalDistribution()
