@@ -61,6 +61,64 @@ def plot_density(model, variables, number_samples=2000):
     warnings.filterwarnings('default')
 
 
+def _joint_grid(col_x, col_y, col_k, df, k_is_color=False, scatter_alpha=.85):
+
+    def colored_kde(x, y, c=None):
+        def kde(*args, **kwargs):
+             args = (x, y)
+             if c is not None:
+                 kwargs['c'] = c
+             kwargs['alpha'] = scatter_alpha
+             sns.kdeplot(*args, **kwargs)
+        return kde
+
+    g = sns.JointGrid(
+        x=col_x,
+        y=col_y,
+        data=df
+    )
+    color = None
+    legends = []
+    for name, df_group in df.groupby(col_k):
+        legends.append(name)
+        if k_is_color:
+            color=name
+        g.plot_joint(
+            colored_kde(df_group[col_x], df_group[col_y], color),
+        )
+        sns.kdeplot(
+            df_group[col_x].values,
+            ax=g.ax_marg_x,
+            color=color,
+            shade=True
+        )
+        sns.kdeplot(
+            df_group[col_y].values,
+            ax=g.ax_marg_y,
+            color=color,
+            shade=True,
+            vertical=True
+        )
+    plt.legend(legends)
+
+
+def plot_multiple_samples(samples_list, variables, labels=None):
+
+    # Model preprocessing
+    N_models = len(samples_list)
+    if labels is None:
+        labels = [str(k) for k in range(N_models)]
+
+    # Join samples
+    joint_subsample = pd.DataFrame()
+    for sample, label in zip(samples_list, labels):
+        sample["Model"] = label
+        joint_subsample = joint_subsample.append(sample[variables + ["Model"]])
+
+    # Plot posterior
+    _joint_grid(variables[0], variables[1], "Model", joint_subsample)
+
+
 def ensemble_histogram(sample_list, variable, weights, bins=30):
     num_samples = sum([len(s) for s in sample_list])
     num_resamples = [int(np.ceil(w*num_samples*2)) for w in weights]

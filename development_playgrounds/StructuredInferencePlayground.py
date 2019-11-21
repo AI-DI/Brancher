@@ -1,4 +1,4 @@
-import chainer
+
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -54,11 +54,15 @@ variational_posterior = ProbabilisticModel([Qb] + Qx)
 AR_model.set_posterior_model(variational_posterior)
 
 # Inference #
+N_iter = 200
+n_samples =10
+optimizer = "SGD"
+lr = 0.001
 inference.perform_inference(AR_model,
-                            number_iterations=1000,
-                            number_samples=30,
-                            optimizer='Adam',
-                            lr=0.01)
+                            number_iterations=N_iter,
+                            number_samples=n_samples,
+                            optimizer=optimizer,
+                            lr=lr)
 
 loss_list = AR_model.diagnostics["loss curve"]
 
@@ -112,10 +116,10 @@ AR_model.set_posterior_model(variational_posterior)
 
 # Inference #
 inference.perform_inference(AR_model,
-                            number_iterations=1000,
-                            number_samples=30,
-                            optimizer='Adam',
-                            lr=0.01)
+                            number_iterations=N_iter,
+                            number_samples=n_samples,
+                            optimizer=optimizer,
+                            lr=lr)
 
 loss_list = AR_model.diagnostics["loss curve"]
 
@@ -173,10 +177,10 @@ AR_model.set_posterior_model(variational_posterior)
 
 # Inference #
 inference.perform_inference(AR_model,
-                            number_iterations=1000,
-                            number_samples=30,
-                            optimizer='Adam',
-                            lr=0.01)
+                            number_iterations=N_iter,
+                            number_samples=n_samples,
+                            optimizer=optimizer,
+                            lr=lr)
 
 loss_list = AR_model.diagnostics["loss curve"]
 
