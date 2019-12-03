@@ -140,10 +140,10 @@ class DecoderArchitecture3(nn.Module):
         output_mean = self.l1(x)
         return {"mean": output_mean}
 
-N_repetitions = 5
-num_itr = 10 #3000
-N_ELBO = 1 #10
-N_ELBO_ITR = 1 #20
+N_repetitions = 15
+num_itr = 3000
+N_ELBO = 10
+N_ELBO_ITR = 20
 
 loss_list1 = []
 loss_list2 = []

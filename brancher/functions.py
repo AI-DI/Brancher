@@ -2,6 +2,7 @@ import types
 from copy import copy
 
 import torch
+import numpy as np
 
 from brancher.variables import var2link
 from brancher.variables import Variable, PartialLink
@@ -141,3 +142,16 @@ def __reshape(input, shape):
     return torch.reshape(input, tuple([batch_size]) + shape)
 
 reshape = BrancherFunction(__reshape)
+
+## Triangular matrices ##
+def _triangular_form(v):
+    b_size = v.shape[0]
+    N = v.shape[1]
+    # TODO; assert shape
+    M = int((np.sqrt(1 + 8 * N) - 1) / 2)
+    tril_matrix = torch.zeros((b_size, M, M))
+    tril_indices = torch.tril_indices(row=M, col=M, offset=0)
+    tril_matrix[:, tril_indices[0], tril_indices[1]] = v
+    return tril_matrix
+
+triangular_form = BrancherFunction(_triangular_form)

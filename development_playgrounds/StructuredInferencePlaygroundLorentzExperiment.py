@@ -12,13 +12,13 @@ import brancher.functions as BF
 N_rep = 15 #10
 
 # Data list
-condition_list = [lambda t: True, lambda t: (t < 10 or t > 20), lambda t: (t < 0 or t > 20)]
-condition_label = ["Full", "Bridge", "Past"]
+condition_list = [lambda t: (t < 10 or t > 20), lambda t: (t < 0 or t > 20), lambda t: True]
+condition_label = ["Bridge", "Past", "Full"]
 
-N_itr = 800 #400
+N_itr = 200
 N_smpl = 20
-optimizer = "SGD"
-lr = 0.001 #0.0002
+optimizer = "Adam"
+lr = 0.05 #0.0002
 N_ELBO_smpl = 1000
 
 
@@ -32,7 +32,7 @@ for cond, label in zip(condition_list, condition_label):
         # Probabilistic model #
         T = 30
         dt = 0.02
-        driving_noise = 1.
+        driving_noise = 0.1 #0.1
         measure_noise = 1.
         s = 10.
         r = 28.
@@ -90,9 +90,9 @@ for cond, label in zip(condition_list, condition_label):
 
         for t in range(1, T):
             if t in y_range:
-                l = 0.  # 0.5
+                l = 1.  # 2
             else:
-                l = 0.  # 0.5
+                l = 1.  # 2
             Qx_mean.append(RootVariable(0, x_names[t] + "_mean", learnable=True))
             Qxlambda.append(RootVariable(l, x_names[t] + "_lambda", learnable=True))
 
@@ -127,8 +127,6 @@ for cond, label in zip(condition_list, condition_label):
 
         loss_list1 = AR_model.diagnostics["loss curve"]
 
-        plt.plot(loss_list1)
-        plt.show()
 
         # ELBO
         ELBO1.append(float(AR_model.estimate_log_model_evidence(N_ELBO_smpl).detach().numpy()))
@@ -193,7 +191,7 @@ for cond, label in zip(condition_list, condition_label):
         # Structured NN distribution #
         hidden_size = 3*10
         latent_size = 3*10
-        Qepsilon = NormalVariable(np.zeros((hidden_size,1)), np.ones((hidden_size,)), 'epsilon', learnable=True)
+        Qepsilon = NormalVariable(np.zeros((hidden_size, 1)), np.ones((hidden_size,)), 'epsilon', learnable=True)
         W1 = RootVariable(np.random.normal(0, 0.1, (hidden_size, latent_size)), "W1", learnable=True)
         W2 = RootVariable(np.random.normal(0, 0.1, (3*T, hidden_size)), "W2", learnable=True)
         pre_x = BF.matmul(W2, BF.sigmoid(BF.matmul(W1, Qepsilon)))
@@ -219,6 +217,12 @@ for cond, label in zip(condition_list, condition_label):
         # ELBO
         ELBO4.append(float(AR_model.estimate_log_model_evidence(N_ELBO_smpl).detach().numpy()))
         print("NN {}".format(ELBO4[-1]))
+
+        # plt.plot(loss_list1)
+        # plt.plot(loss_list2)
+        # plt.plot(loss_list3)
+        # plt.plot(loss_list4)
+        # plt.show()
 
     d = {'PE': ELBO1, 'MF': ELBO2, "MN": ELBO3, "NN": ELBO4}
 

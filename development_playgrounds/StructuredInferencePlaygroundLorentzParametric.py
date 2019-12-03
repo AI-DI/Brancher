@@ -12,8 +12,8 @@ import brancher.functions as BF
 N_rep = 15 #10
 
 # Data list
-condition_list = [lambda t: (t < 10 or t > 20), lambda t: (t < 0 or t > 20), lambda t: True]
-condition_label = ["Bridge", "Past", "Full"]
+cond = lambda t: (t < 10 or t > 20)
+prior_list = np.linspace(0.1, 0.8, 8)
 
 N_itr = 200
 N_smpl = 20
@@ -22,7 +22,8 @@ lr = 0.05 #0.0002
 N_ELBO_smpl = 1000
 
 
-for cond, label in zip(condition_list, condition_label):
+for pr in prior_list:
+    print("Driving noise: {}".format(pr))
     ELBO1 = []
     ELBO2 = []
     ELBO3 = []
@@ -32,7 +33,7 @@ for cond, label in zip(condition_list, condition_label):
         # Probabilistic model #
         T = 30
         dt = 0.02
-        driving_noise = 0.1 #0.1
+        driving_noise = pr #0.1
         measure_noise = 1.
         s = 10.
         r = 28.
@@ -224,18 +225,10 @@ for cond, label in zip(condition_list, condition_label):
         # plt.plot(loss_list4)
         # plt.show()
 
-    d = {'PE': ELBO1, 'MF': ELBO2, "MN": ELBO3, "NN": ELBO4}
+d = {'PE': ELBO1, 'MF': ELBO2, "MN": ELBO3, "NN": ELBO4, "axis": prior_list}
 
-    import pickle
-    with open('{}_lorentz_results.pickle'.format(label), 'wb') as f:
-        pickle.dump(d, f)
-
-    df = pd.DataFrame(data=d)
-    df.boxplot()
-    plt.title(label)
-    plt.ylabel("ELBO")
-    plt.savefig("Lorentz " +label+".pdf")
-    plt.clf()
-    #plt.show()
+import pickle
+with open('lorentz_results_parametric.pickle', 'wb') as f:
+    pickle.dump(d, f)
 
 

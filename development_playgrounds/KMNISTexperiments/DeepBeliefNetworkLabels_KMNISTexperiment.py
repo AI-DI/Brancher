@@ -20,8 +20,8 @@ latent_size1 = 2
 latent_size2 = 50
 latent_size3 = 100
 
-train = torchvision.datasets.FashionMNIST(root='./data', train=True, download=True, transform=None)
-test = torchvision.datasets.FashionMNIST(root='./data', train=False, download=True, transform=None)
+train = torchvision.datasets.KMNIST(root='./data', train=True, download=True, transform=None)
+test = torchvision.datasets.KMNIST(root='./data', train=False, download=True, transform=None)
 dataset_size = len(train)
 dataset = np.reshape(train.train_data.numpy(), newshape=(dataset_size, image_size, 1))
 data_mean = np.mean(dataset)
@@ -152,10 +152,10 @@ class DecoderArchitectureLabel(nn.Module):
         output_logits = self.l1(x)
         return output_logits
 
-N_repetitions = 2 #15
-num_itr = 50 #3000
-N_ELBO = 1 #10
-N_ELBO_ITR = 1 #20
+N_repetitions = 5
+num_itr = 3000
+N_ELBO = 10
+N_ELBO_ITR = 20
 b_size = 200
 
 loss_list1 = []
@@ -396,7 +396,7 @@ d = {"Loss": {"MF": loss_list1, "PC": loss_list2, "NN": loss_list1},
      "Images": {"Images": image_grid, "Labels": label_grid}}
 
 import pickle
-with open('fMNISTnetworkLabels.pickle', 'wb') as f:
+with open('KMNISTnetworkLabels.pickle', 'wb') as f:
     pickle.dump(d, f)
 
 #Plot results

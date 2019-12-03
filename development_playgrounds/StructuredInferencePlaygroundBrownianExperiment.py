@@ -163,17 +163,23 @@ for cond, label in zip(condition_list, condition_label):
         ELBO4.append(float(AR_model.estimate_log_model_evidence(N_ELBO_smpl).detach().numpy()))
         print("NN {}".format(ELBO4[-1]))
 
+        # plt.plot(loss_list1)
+        # plt.plot(loss_list2)
+        # plt.plot(loss_list3)
+        # plt.plot(loss_list4)
+        # plt.show()
+
     d = {'PE': ELBO1, 'MF': ELBO2, "MN": ELBO3, "NN": ELBO4}
 
     import pickle
-    with open('{}_oscillatory_results.pickle'.format(label), 'wb') as f:
+    with open('{}_brownian_results.pickle'.format(label), 'wb') as f:
         pickle.dump(d, f)
 
     df = pd.DataFrame(data=d)
     df.boxplot()
     plt.title(label)
     plt.ylabel("ELBO")
-    plt.savefig(label+".pdf")
+    plt.savefig("brownian " +label+".pdf")
     plt.clf()
     #plt.show()
 

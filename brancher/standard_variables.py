@@ -3,12 +3,15 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 import torch.nn as nn
+import torch
 
 import brancher.distributions as distributions
 import brancher.functions as BF
 import brancher.geometric_ranges as geometric_ranges
 from brancher.variables import var2link, Variable, RootVariable, RandomVariable, PartialLink
 from brancher.utilities import join_sets_list
+
+from brancher.config import device
 
 
 ## Stochastic process base class ##
@@ -99,6 +102,7 @@ class StandardVariable(RandomVariable):
         self.has_random_dataset = False
         self.has_observed_value = False
         self.is_normalized = True
+        self.silenced = False
         self.partial_links = {name: var2link(link) for name, link in kwargs.items()}
 
     def construct_deterministic_parents(self, learnable, ranges, kwargs):
@@ -266,11 +270,17 @@ class DeterministicVariable(StandardVariable): #TODO: Future refactor? Should De
     ----------
     value: brancher.Variables, numbers, numpy.ndarrays, torch.Tensors, or List/Tuple of
     brancher.Variables and brancher.PartialLinks. The value of this variable.
+    log_determinant: PartialLink. The log determinant of the transformation used to obtain the value of this variable.
     """
-    def __init__(self, value, name, learnable=False, has_bias=False, is_observed=False, variable_range=geometric_ranges.UnboundedRange()):
+    def __init__(self, value, name, log_determinant=None, learnable=False, has_bias=False, is_observed=False, variable_range=geometric_ranges.UnboundedRange()):
         self._type = "Deterministic node"
-        ranges = {"value": variable_range}
-        super().__init__(name, value=value, learnable=learnable, has_bias=has_bias, ranges=ranges, is_observed=is_observed)
+        if not isinstance(log_determinant, PartialLink):
+            if log_determinant is None:
+                log_determinant = torch.tensor(np.zeros((1, 1))).float().to(device)
+            var2link(log_determinant)
+        ranges = {"value": variable_range,
+                  "log_determinant": geometric_ranges.UnboundedRange()}
+        super().__init__(name, value=value, log_determinant=log_determinant, learnable=learnable, has_bias=has_bias, ranges=ranges, is_observed=is_observed)
         self.distribution = distributions.DeterministicDistribution()
 
     @property

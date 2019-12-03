@@ -3,6 +3,7 @@
 """
 from abc import ABC, abstractmethod
 import numpy as np
+import torch
 
 import brancher.functions as BF
 from brancher.utilities import partial_broadcast
@@ -91,15 +92,12 @@ class PositiveDefiniteMatrix(GeometricRange): #TODO: Work in progress
         return chol_factor
 
 
-# class UpperTriangularPositiveDefiniteMatrix(GeometricRange): #TODO: Work in progress
+# class LowerTriangular(GeometricRange): #TODO: Work in progress
 #
 #     def forward_transform(self, x, dim):
-#         pass
-#         #matrix_shape = x.shape[-2:]
-#         #return BF.matmul(x, BF.transpose(x, -2,-1))
+#         return BF.triangular_form(x)
 #
 #     def inverse_transform(self, y, dim):
-#         pass
-#         #chol_factor = np.linalg.cholesky(y)
-#         #return chol_factor
+#         pass #TODO
+
 

@@ -376,9 +376,15 @@ class DeterministicDistribution(ImplicitDistribution):
         self.has_differentiable_samples = True
         self.is_finite = True
         self.is_discrete = True
-        self.has_analytic_entropy = True
+        self.has_analytic_entropy = False
         self.has_analytic_mean = True
         self.has_analytic_var = True
+
+    def _calculate_log_probability(self, x, **parameters):
+        if "log_determinant" in parameters:
+            return parameters["log_determinant"]
+        else:
+            return super()._calculate_log_probability(self, x, **parameters)
 
     def _get_sample(self, differentiable, **parameters):
         """

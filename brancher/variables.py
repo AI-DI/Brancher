@@ -114,17 +114,6 @@ class BrancherClass(ABC):
     def _get_variance(self, input_values={}):
         return self._get_statistic(query=lambda dist, parameters: dist.get_variance(**parameters), input_values=input_values)
 
-    #def _get_entropy(self, input_values={}):
-    #    if isinstance(self, ProbabilisticModel) or self.distribution.has_analytic_entropy:
-    #        entropy_array = self._get_statistic(query=lambda dist, parameters: dist.get_entropy(**parameters),
-    #                                            input_values=input_values)
-    #        if isinstance(self, ProbabilisticModel):
-    #            return sum([sum_from_dim(var_ent, 2) for var_ent in entropy_array.values()])
-    #        else:
-    #            return sum_from_dim(entropy_array, 2)
-    #    else:
-    #        return -self.calculate_log_probability(self, input_values, include_parents=False)
-
 
 class Variable(BrancherClass):
     """
@@ -189,6 +178,8 @@ class Variable(BrancherClass):
         Returns:
             torch.Tensor or np.array.
         """
+        if self.silenced:
+            return torch.Tensor(np.zeros((1, 1))).float().to(device)
         if self.distribution.has_analytic_entropy:
             entropy_array = self._get_statistic(query=lambda dist, parameters: dist.get_entropy(**parameters),
                                                 input_values=input_values)
@@ -438,6 +429,7 @@ class RootVariable(Variable):
         self.learnable = learnable
         self.link = None
         self._value = coerce_to_dtype(data, is_observed)
+        self.silenced = False
         if self.learnable:
             if not is_discrete(data):
                 self._value = torch.nn.Parameter(coerce_to_dtype(data, is_observed), requires_grad=True)
@@ -605,6 +597,7 @@ class RandomVariable(Variable):
         self.dataset = None
         self.has_random_dataset = False
         self.has_observed_value = False
+        self.silenced = False
 
     @property
     def value(self):
@@ -722,7 +715,7 @@ class RandomVariable(Variable):
         Returns:
             torch.Tensor. The log probability of the input values given the model.
         """
-        if self._evaluated and not reevaluate:
+        if self.silenced or (self._evaluated and not reevaluate):
             return 0.
         value = self._get_its_own_value_from_input(input_values, reevaluate)
         self._evaluated = True
@@ -870,6 +863,18 @@ class RandomVariable(Variable):
         """
         variables = list(self.ancestors) + [self]
         return sorted(variables, key=lambda v: v.name)
+
+    def silence_density(self):
+        """
+        Method. It forces the variable to return zero when queried for log_density and entropy.
+
+        Args:
+            None.
+
+        Returns:
+            List.
+        """
+        self.silenced = True
 
 
 class ProbabilisticModel(BrancherClass):

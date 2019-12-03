@@ -27,7 +27,7 @@ x_names = ["x0"]
 h_names = ["h0"]
 z_names = ["z0"]
 y_names = ["y0"]
-y_range = [t for t in range(T) if (t < 10 or t > 20)]
+y_range = [t for t in range(T)]
 for t in range(1, T):
     x_names.append("x{}".format(t))
     h_names.append("h{}".format(t))
@@ -46,11 +46,11 @@ AR_model = ProbabilisticModel(x + y)
 
 # Generate data #
 data = AR_model._get_sample(number_samples=1)
-time_series = [float(data[yt].data) for yt in y]
+time_series = [float(data[yt].data) if t != 5 and t != 25 else 20. for t, yt in enumerate(y)]
 ground_truth = [float(data[xt].data) for xt in x]
 
 # Observe data #
-[yt.observe(data[yt][:, 0, :]) for yt in y]
+[yt.observe(d) for yt, d in zip(y,time_series)]
 
 #get time series
 plt.plot([data[xt][:, 0, :] for xt in x])
@@ -103,7 +103,7 @@ variational_posterior = ProbabilisticModel(Qx + Qh + Qz)
 AR_model.set_posterior_model(variational_posterior)
 #
 # # Inference #
-N_itr = 400 #800
+N_itr = 100 #800
 N_smpl = 10
 optimizer = "SGD"
 lr = 0.1

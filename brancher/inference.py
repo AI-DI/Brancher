@@ -17,7 +17,7 @@ from brancher.optimizers import ProbabilisticOptimizer
 from brancher.variables import Variable, ProbabilisticModel, Ensemble
 from brancher.stochastic_processes import StochasticProcess
 from brancher.standard_variables import DeterministicVariable
-from brancher.transformations import truncate_model
+from brancher.model_transformations import truncate_model
 from brancher.variables import RootVariable
 from brancher import gradient_estimators
 
