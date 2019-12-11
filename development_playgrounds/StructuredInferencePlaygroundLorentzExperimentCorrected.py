@@ -312,7 +312,7 @@ for cond, label in zip(condition_list, condition_label):
     df.boxplot()
     plt.title(label)
     plt.ylabel("ELBO")
-    plt.savefig("Lorentz " +label+".pdf")
+    plt.savefig("Lorentz " + label + ".pdf")
     plt.clf()
     #plt.show()
 
