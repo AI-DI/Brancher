@@ -66,7 +66,7 @@ class TriangularLinear(Transformation):
         self.v = v
         tri_matrix = BF.triangular_form(v)
         if upper:
-            tri_matrix = BF.transpose(tri_matrix, 2, 1)
+            tri_matrix = BF.transpose(tri_matrix, 2, 1) #TODO: Dangerous, uses inconsistent indexing
         self.tri_matrix = tri_matrix
         self.diag_indices = np.diag_indices(mat_dim)
         self.shift = shift
@@ -79,3 +79,23 @@ class TriangularLinear(Transformation):
         return DeterministicVariable(output,
                                      log_determinant=log_det,
                                      name="L {}".format(var.name))
+
+
+class PlanarFlow(Transformation):
+
+    def __init__(self, w, u, b, learnable=False, shift=0.001):
+        self.w = w
+        self.u = u
+        self.b = b
+        self.shift = shift
+        self.learnable = learnable
+
+    def __call__(self, var):
+        dot_output = BF.dot(self.w, var, reduce=False) + self.b
+        output = var + self.u*BF.sigmoid(dot_output)
+        d_sigmoid = lambda x: BF.sigmoid(x)*(1. - BF.sigmoid(x))
+        psy = d_sigmoid(dot_output)*self.w
+        log_det = -BF.log(BF.abs(1. + BF.dot(self.u, psy)) + self.shift)
+        return DeterministicVariable(output,
+                                     log_determinant=log_det,
+                                     name="PlanarFlow {}".format(var.name))

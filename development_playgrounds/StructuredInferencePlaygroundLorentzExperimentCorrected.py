@@ -6,7 +6,7 @@ import torch
 
 from brancher.variables import RootVariable, RandomVariable, ProbabilisticModel
 from brancher.standard_variables import NormalVariable, MultivariateNormalVariable, DeterministicVariable
-from brancher.transformations import TriangularLinear, Sigmoid, Bias
+from brancher.transformations import TriangularLinear, Sigmoid, Bias, PlanarFlow
 from brancher import inference
 import brancher.functions as BF
 
@@ -17,11 +17,12 @@ N_rep = 15 #15
 condition_list = [lambda t: (t < 10 or t > 20), lambda t: (t < 0 or t > 20), lambda t: True]
 condition_label = ["Bridge", "Past", "Full"]
 
-N_itr = 400
-N_smpl = 20
+N_itr = 500
+N_itr_NN = 500
+N_smpl = 20 #20
 optimizer = "Adam"
-lr = 0.1 #0.02
-nn_lr = 0.02
+lr = 0.025 #0.02
+nn_lr = 0.025 #0.02
 N_ELBO_smpl = 1000
 
 
@@ -39,8 +40,8 @@ for cond, label in zip(condition_list, condition_label):
         # Probabilistic model #
         T = 30 #30
         dt = 0.02
-        driving_noise = 1. #0.2
-        measure_noise = 1. #0.2
+        driving_noise = 0.2 #0.2
+        measure_noise = 0.2 #0.2
         s = 10.
         r = 28.
         b = 8 / 3.
@@ -200,26 +201,124 @@ for cond, label in zip(condition_list, condition_label):
         print("MF MSE {}".format(MSE))
         MSE2.append(MSE)
 
-        # Structured NN distribution #
-        # Variational distribution
-        N = int(3*T * (3*T + 1) / 2)
-        v1 = DeterministicVariable(torch.normal(0., 0.1, (N,)), "v1", learnable=True)
-        v2 = DeterministicVariable(torch.normal(0., 0.1, (N,)), "v2", learnable=True)
-        b1 = DeterministicVariable(torch.normal(0., 0.1, (3*T, 1)), "b1", learnable=True)
-        w1 = DeterministicVariable(torch.normal(0., 0.1, (N,)), "w1", learnable=True)
-        w2 = DeterministicVariable(torch.normal(0., 0.1, (N,)), "w2", learnable=True)
-        b2 = DeterministicVariable(torch.normal(0., 0.1, (3*T, 1)), "b2", learnable=True)
-        Qz = NormalVariable(torch.zeros((3*T, 1)), torch.ones((3*T, 1)), "z")
-        Qtrz = Bias(b1)(TriangularLinear(w1, T)(TriangularLinear(w2, T, upper=True)(
-            Sigmoid()(Bias(b2)(TriangularLinear(v1, T)(TriangularLinear(v2, T, upper=True)(Qz)))))))
+        # # Structured NN distribution #
+        # # Variational distribution
+        # N = int(3*T * (3*T + 1) / 2)
+        # v1 = DeterministicVariable(torch.normal(0., 0.1, (N,)), "v1", learnable=True)
+        # v2 = DeterministicVariable(torch.normal(0., 0.1, (N,)), "v2", learnable=True)
+        # b1 = DeterministicVariable(torch.normal(0., 0.1, (3*T, 1)), "b1", learnable=True)
+        # w1 = DeterministicVariable(torch.normal(0., 0.1, (N,)), "w1", learnable=True)
+        # w2 = DeterministicVariable(torch.normal(0., 0.1, (N,)), "w2", learnable=True)
+        # b2 = DeterministicVariable(torch.normal(0., 0.1, (3*T, 1)), "b2", learnable=True)
+        # Qz = NormalVariable(torch.zeros((3*T, 1)), torch.ones((3*T, 1)), "z")
+        # Qtrz = Bias(b1)(TriangularLinear(w1, T)(TriangularLinear(w2, T, upper=True)(
+        #     Sigmoid()(Bias(b2)(TriangularLinear(v1, T)(TriangularLinear(v2, T, upper=True)(Qz)))))))
+        #
+        # Qx = []
+        # Qh = []
+        # Qz = []
+        # for t in range(0, T):
+        #     Qx.append(DeterministicVariable(Qtrz[t], x_names[t], learnable=True))
+        #     Qh.append(DeterministicVariable(Qtrz[T + t], h_names[t], learnable=True))
+        #     Qz.append(DeterministicVariable(Qtrz[2*T + t], z_names[t], learnable=True))
+        # variational_posterior = ProbabilisticModel(Qx + Qh + Qz)
+        # AR_model.set_posterior_model(variational_posterior)
+        #
+        # # Inference #
+        # inference.perform_inference(AR_model,
+        #                             number_iterations=N_itr_NN,
+        #                             number_samples=N_smpl,
+        #                             optimizer=optimizer,
+        #                             lr=nn_lr) #lr)
+        #
+        # loss_list4 = AR_model.diagnostics["loss curve"]
+        #
+        # # ELBO
+        # #ELBO4.append(float(AR_model.estimate_log_model_evidence(N_ELBO_smpl).detach().numpy()))
+        # #print("NN {}".format(ELBO4[-1]))
+        #
+        # # MSE
+        # posterior_samples = AR_model._get_posterior_sample(2000)
+        #
+        # x_mean4 = []
+        # lower_bound4 = []
+        # upper_bound4 = []
+        # for xt in x:
+        #     x_posterior_samples = posterior_samples[xt].detach().numpy().flatten()
+        #     mean = np.mean(x_posterior_samples)
+        #     sd = np.sqrt(np.var(x_posterior_samples))
+        #     x_mean4.append(mean)
+        #     lower_bound4.append(mean - sd)
+        #     upper_bound4.append(mean + sd)
+        # MSE = np.mean((np.array(ground_truth) - np.array(x_mean4))**2)
+        # print("NN MSE {}".format(MSE))
+        # MSE4.append(MSE)
 
-        Qx = []
-        Qh = []
-        Qz = []
-        for t in range(0, T):
-            Qx.append(DeterministicVariable(Qtrz[t], x_names[t], learnable=True))
-            Qh.append(DeterministicVariable(Qtrz[T + t], h_names[t], learnable=True))
-            Qz.append(DeterministicVariable(Qtrz[2*T + t], z_names[t], learnable=True))
+        # # Structured NN distribution #
+        # # Variational distribution
+        # u1 = DeterministicVariable(torch.normal(0., 1., (3*T, 1)), "u1", learnable=True)
+        # w1 = DeterministicVariable(torch.normal(0., 1., (3*T, 1)), "w1", learnable=True)
+        # b1 = DeterministicVariable(torch.normal(0., 1., (1, 1)), "b1", learnable=True)
+        # u2 = DeterministicVariable(torch.normal(0., 1., (3*T, 1)), "u2", learnable=True)
+        # w2 = DeterministicVariable(torch.normal(0., 1., (3*T, 1)), "w2", learnable=True)
+        # b2 = DeterministicVariable(torch.normal(0., 1., (1, 1)), "b2", learnable=True)
+        # z = NormalVariable(torch.zeros((3*T, 1)), torch.ones((3*T, 1)), "z", learnable=True)
+        # Qtrz = PlanarFlow(w2, u2, b2)(PlanarFlow(w1, u1, b1)(z))
+        #
+        # Qx = []
+        # Qh = []
+        # Qz = []
+        # for t in range(0, T):
+        #     Qx.append(DeterministicVariable(Qtrz[t], x_names[t], learnable=True))
+        #     Qh.append(DeterministicVariable(Qtrz[T + t], h_names[t], learnable=True))
+        #     Qz.append(DeterministicVariable(Qtrz[2 * T + t], z_names[t], learnable=True))
+        # variational_posterior = ProbabilisticModel(Qx + Qh + Qz)
+        # AR_model.set_posterior_model(variational_posterior)
+        #
+        # # Inference #
+        # inference.perform_inference(AR_model,
+        #                             number_iterations=N_itr_NN,
+        #                             number_samples=N_smpl,
+        #                             optimizer=optimizer,
+        #                             lr=nn_lr)  # lr)
+        #
+        # loss_list4 = AR_model.diagnostics["loss curve"]
+        #
+        # # ELBO
+        # # ELBO4.append(float(AR_model.estimate_log_model_evidence(N_ELBO_smpl).detach().numpy()))
+        # # print("NN {}".format(ELBO4[-1]))
+        #
+        # # MSE
+        # posterior_samples = AR_model._get_posterior_sample(2000)
+        #
+        # x_mean4 = []
+        # lower_bound4 = []
+        # upper_bound4 = []
+        # for xt in x:
+        #     x_posterior_samples = posterior_samples[xt].detach().numpy().flatten()
+        #     mean = np.mean(x_posterior_samples)
+        #     sd = np.sqrt(np.var(x_posterior_samples))
+        #     x_mean4.append(mean)
+        #     lower_bound4.append(mean - sd)
+        #     upper_bound4.append(mean + sd)
+        # MSE = np.mean((np.array(ground_truth) - np.array(x_mean4)) ** 2)
+        # print("NN MSE {}".format(MSE))
+        # MSE4.append(MSE)
+
+        # Multivariate normal variational distribution #
+
+        QV = MultivariateNormalVariable(loc=np.zeros((3*T,)),
+                                        scale_tril=np.identity(3*T),
+                                        name="V",
+                                        learnable=True)
+        Qx = [NormalVariable(QV[0], 0.1, 'x0', learnable=True)]
+        Qh = [NormalVariable(QV[0], 0.1, 'h0', learnable=True)]
+        Qz = [NormalVariable(QV[0], 0.1, 'z0', learnable=True)]
+
+        for t in range(1, T):
+            Qx.append(DeterministicVariable(QV[t], x_names[t], learnable=True))
+            Qh.append(DeterministicVariable(QV[T + t], h_names[t], learnable=True))
+            Qz.append(DeterministicVariable(QV[2*T + t], z_names[t], learnable=True))
         variational_posterior = ProbabilisticModel(Qx + Qh + Qz)
         AR_model.set_posterior_model(variational_posterior)
 
@@ -228,7 +327,57 @@ for cond, label in zip(condition_list, condition_label):
                                     number_iterations=N_itr,
                                     number_samples=N_smpl,
                                     optimizer=optimizer,
-                                    lr=nn_lr) #lr)
+                                    lr=lr)
+
+        loss_list3 = AR_model.diagnostics["loss curve"]
+
+        # ELBO
+        ELBO3.append(float(AR_model.estimate_log_model_evidence(N_ELBO_smpl).detach().numpy()))
+        print("MN {}".format(ELBO3[-1]))
+
+        # MSE
+        posterior_samples = AR_model._get_posterior_sample(2000)
+
+        x_mean3 = []
+        lower_bound3 = []
+        upper_bound3 = []
+        for xt in x:
+            x_posterior_samples = posterior_samples[xt].detach().numpy().flatten()
+            mean = np.mean(x_posterior_samples)
+            sd = np.sqrt(np.var(x_posterior_samples))
+            x_mean3.append(mean)
+            lower_bound3.append(mean - sd)
+            upper_bound3.append(mean + sd)
+        MSE = np.mean((np.array(ground_truth) - np.array(x_mean3)) ** 2)
+        print("MN MSE {}".format(MSE))
+        MSE3.append(MSE)
+
+        # Structured NN distribution #
+        hidden_size = 3 * 10
+        latent_size = 3 * 10
+        epsilon = NormalVariable(np.zeros((hidden_size, 1)), np.ones((hidden_size,)), 'epsilon', learnable=True)
+        AR_model = ProbabilisticModel(x + y + [epsilon])
+
+        Qepsilon = NormalVariable(np.zeros((hidden_size, 1)), np.ones((hidden_size,)), 'epsilon', learnable=True)
+        W1 = RootVariable(np.random.normal(0, 0.1, (hidden_size, latent_size)), "W1", learnable=True)
+        W2 = RootVariable(np.random.normal(0, 0.1, (3*T, hidden_size)), "W2", learnable=True)
+        pre_x = BF.matmul(W2, BF.sigmoid(BF.matmul(W1, Qepsilon)))
+        Qx = []
+        Qh = []
+        Qz = []
+        for t in range(0, T):
+            Qx.append(NormalVariable(pre_x[t], driving_noise, x_names[t], learnable=True))
+            Qh.append(NormalVariable(pre_x[T + t], driving_noise, h_names[t], learnable=True))
+            Qz.append(NormalVariable(pre_x[2*T + t], driving_noise, z_names[t], learnable=True))
+        variational_posterior = ProbabilisticModel(Qx + Qh + Qz)
+        AR_model.set_posterior_model(variational_posterior)
+
+        # Inference #
+        inference.perform_inference(AR_model,
+                                    number_iterations=N_itr_NN,
+                                    number_samples=N_smpl,
+                                    optimizer=optimizer,
+                                    lr=nn_lr)
 
         loss_list4 = AR_model.diagnostics["loss curve"]
 
@@ -249,40 +398,11 @@ for cond, label in zip(condition_list, condition_label):
             x_mean4.append(mean)
             lower_bound4.append(mean - sd)
             upper_bound4.append(mean + sd)
-        MSE = np.mean((np.array(ground_truth) - np.array(x_mean4))**2)
+        MSE = np.mean((np.array(ground_truth) - np.array(x_mean4)) ** 2)
         print("NN MSE {}".format(MSE))
         MSE4.append(MSE)
 
         #
-        # # Multivariate normal variational distribution #
-        #
-        # QV = MultivariateNormalVariable(loc=np.zeros((3*T,)),
-        #                                 scale_tril=np.identity(3*T),
-        #                                 name="V",
-        #                                 learnable=True)
-        # Qx = [NormalVariable(QV[0], 0.1, 'x0', learnable=True)]
-        # Qh = [NormalVariable(QV[0], 0.1, 'h0', learnable=True)]
-        # Qz = [NormalVariable(QV[0], 0.1, 'z0', learnable=True)]
-        #
-        # for t in range(1, T):
-        #     Qx.append(NormalVariable(QV[t], driving_noise, x_names[t], learnable=True))
-        #     Qh.append(NormalVariable(QV[T + t], driving_noise, h_names[t], learnable=True))
-        #     Qz.append(NormalVariable(QV[2*T + t], driving_noise, z_names[t], learnable=True))
-        # variational_posterior = ProbabilisticModel(Qx + Qh + Qz)
-        # AR_model.set_posterior_model(variational_posterior)
-        #
-        # # Inference #
-        # inference.perform_inference(AR_model,
-        #                             number_iterations=N_itr,
-        #                             number_samples=N_smpl,
-        #                             optimizer=optimizer,
-        #                             lr=lr)
-        #
-        # loss_list3 = AR_model.diagnostics["loss curve"]
-        #
-        # # ELBO
-        # ELBO3.append(float(AR_model.estimate_log_model_evidence(N_ELBO_smpl).detach().numpy()))
-        # print("MN {}".format(ELBO3[-1]))
 
         # # Two subplots, unpack the axes array immediately
         # f, (ax1, ax2) = plt.subplots(1, 2)
@@ -302,13 +422,14 @@ for cond, label in zip(condition_list, condition_label):
         # ax2.set_xlabel("Iteration")
         # plt.show()
 
-    d = {'PE': {"ELBO": ELBO1, "MSE": MSE1}, 'MF': {"ELBO": ELBO2, "MSE": MSE2}, "MN": {}, "NN": {"ELBO": ELBO4, "MSE": MSE4}}
+    d = {'PE': {"ELBO": ELBO1, "MSE": MSE1}, 'ADVI (MF)': {"ELBO": ELBO2, "MSE": MSE2}, "ADVI (MN)": {"ELBO": ELBO3, "MSE": MSE3}, "NN": {"ELBO": ELBO4, "MSE": MSE4}}
+    c = {'PE': MSE1, 'ADVI (MF)': MSE2, "ADVI (MN)": MSE3, "NN": MSE4}
 
     import pickle
     with open('{}_lorentz_results.pickle'.format(label), 'wb') as f:
         pickle.dump(d, f)
 
-    df = pd.DataFrame(data=d)
+    df = pd.DataFrame(data=c)
     df.boxplot()
     plt.title(label)
     plt.ylabel("ELBO")

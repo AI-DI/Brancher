@@ -155,3 +155,31 @@ def _triangular_form(v):
     return tril_matrix
 
 triangular_form = BrancherFunction(_triangular_form)
+
+## Matrices
+
+def _transpose_matrix(M):
+    return torch.transpose(M, 2, 1)
+
+transpose_matrix = BrancherFunction(_transpose_matrix)
+
+## Dot product
+
+def _dot(v, w, reduce=True):
+    b_size = v.shape[0]
+    v_size = v.shape[1]
+    vectors = []
+    for tensor in [v, w]:
+        if len(tensor.shape) == 2:
+            vectors.append(torch.unsqueeze(tensor, 2))
+        elif tensor.shape[2] != 1 or len(tensor.shape) > 3:
+            raise ValueError("The doct product is only defined between two vectors")
+        else:
+            vectors.append(tensor)
+    out = torch.matmul(torch.transpose(vectors[0], 2, 1), vectors[1])
+    if reduce:
+        return out
+    else:
+        return out.repeat(1, v_size, 1)
+
+dot = BrancherFunction(_dot)

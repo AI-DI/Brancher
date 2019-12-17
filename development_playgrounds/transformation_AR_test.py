@@ -6,7 +6,7 @@ from brancher.variables import ProbabilisticModel
 from brancher.standard_variables import NormalVariable, DeterministicVariable, BetaVariable
 import brancher.functions as BF
 from brancher.visualizations import plot_density
-from brancher.transformations import Exp, Scaling, TriangularLinear, Sigmoid, Bias
+from brancher.transformations import Exp, Scaling, TriangularLinear, Sigmoid, Bias, PlanarFlow
 from brancher import inference
 from brancher.visualizations import plot_posterior
 
@@ -40,15 +40,25 @@ ground_truth = [float(data[xt].data) for xt in x]
 [yt.observe(data[yt][:, 0, :]) for yt in y]
 
 # Variational distribution
-N = int(T*(T+1)/2)
-v1 = DeterministicVariable(torch.normal(0., 0.1, (N,)), "v1", learnable=True)
-v2 = DeterministicVariable(torch.normal(0., 0.1, (N,)), "v2", learnable=True)
-b1 = DeterministicVariable(torch.normal(0., 0.1, (T,1)), "b1", learnable=True)
-w1 = DeterministicVariable(torch.normal(0., 0.1, (N,)), "w1", learnable=True)
-w2 = DeterministicVariable(torch.normal(0., 0.1, (N,)), "w2", learnable=True)
-b2 = DeterministicVariable(torch.normal(0., 0.1, (T,1)), "b2", learnable=True)
-Qz = NormalVariable(torch.zeros((T, 1)), torch.ones((T, 1)), "z")
-Qtrz = Bias(b1)(TriangularLinear(w1, T)(TriangularLinear(w2, T, upper=True)(Sigmoid()(Bias(b2)(TriangularLinear(v1, T)(TriangularLinear(v2, T, upper=True)(Qz)))))))
+# N = int(T*(T+1)/2)
+# v1 = DeterministicVariable(torch.normal(0., 0.1, (N,)), "v1", learnable=True)
+# v2 = DeterministicVariable(torch.normal(0., 0.1, (N,)), "v2", learnable=True)
+# b1 = DeterministicVariable(torch.normal(0., 0.1, (T,1)), "b1", learnable=True)
+# w1 = DeterministicVariable(torch.normal(0., 0.1, (N,)), "w1", learnable=True)
+# w2 = DeterministicVariable(torch.normal(0., 0.1, (N,)), "w2", learnable=True)
+# b2 = DeterministicVariable(torch.normal(0., 0.1, (T,1)), "b2", learnable=True)
+# Qz = NormalVariable(torch.zeros((T, 1)), torch.ones((T, 1)), "z")
+# Qtrz = Bias(b1)(TriangularLinear(w1, T)(TriangularLinear(w2, T, upper=True)(Sigmoid()(Bias(b2)(TriangularLinear(v1, T)(TriangularLinear(v2, T, upper=True)(Qz)))))))
+
+# Variational distribution
+u1 = DeterministicVariable(torch.normal(0., 1., (T, 1)), "u1", learnable=True)
+w1 = DeterministicVariable(torch.normal(0., 1., (T, 1)), "w1", learnable=True)
+b1 = DeterministicVariable(torch.normal(0., 1., (1, 1)), "b1", learnable=True)
+u2 = DeterministicVariable(torch.normal(0., 1., (T, 1)), "u2", learnable=True)
+w2 = DeterministicVariable(torch.normal(0., 1., (T, 1)), "w2", learnable=True)
+b2 = DeterministicVariable(torch.normal(0., 1., (1, 1)), "b2", learnable=True)
+z = NormalVariable(torch.zeros((T, 1)), torch.ones((T, 1)), "z", learnable=True)
+Qtrz = PlanarFlow(w2, u2, b2)(PlanarFlow(w1, u1, b1)(z))
 
 Qx = []
 for t in range(0, T):
