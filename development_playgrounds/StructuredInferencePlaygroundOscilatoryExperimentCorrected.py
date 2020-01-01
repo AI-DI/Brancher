@@ -39,18 +39,23 @@ for cond, label in zip(condition_list, condition_label):
         T = 40
         dt = 0.01
         driving_noise = 0.5
-        measure_noise = 0.1
+        measure_noise = 0.2
         x0 = NormalVariable(0., driving_noise, 'x0')
         y0 = NormalVariable(x0, measure_noise, 'y0')
+        x1 = NormalVariable(0., driving_noise, 'x1')
+        y1 = NormalVariable(x1, measure_noise, 'y1')
+        b = 20
+        omega = 2*np.pi*8
 
-        x = [x0]
-        y = [y0]
-        x_names = ["x0"]
-        y_names = ["y0"]
+        x = [x0, x1]
+        y = [y0, y1]
+        x_names = ["x0", "x1"]
+        y_names = ["y0", "y1"]
         y_range = [t for t in range(T) if cond(t)]
-        for t in range(1, T):
+        for t in range(2, T):
             x_names.append("x{}".format(t))
-            x.append(NormalVariable(x[t - 1], np.sqrt(dt) * driving_noise, x_names[t]))
+            new_mu = (-1 - omega**2*dt**2 + b*dt)*x[t - 2] + (2 - b*dt)*x[t - 1]
+            x.append(NormalVariable(new_mu, np.sqrt(dt)*driving_noise, x_names[t]))
             if t in y_range:
                 y_name = "y{}".format(t)
                 y_names.append(y_name)
@@ -67,19 +72,25 @@ for cond, label in zip(condition_list, condition_label):
         # Observe data #
         [yt.observe(data[yt][:, 0, :]) for yt in y]
 
-        # Structured variational distribution #
-        Qx = [NormalVariable(0., 1., 'x0', learnable=True)]
-        Qx_mean = [RootVariable(0., 'x0_mean', learnable=True)]
-        Qlambda = [RootVariable(-1., 'x0_lambda', learnable=True)]
 
-        for t in range(1, T):
+        # Structured variational distribution #
+        Qx = [NormalVariable(0., 1., 'x0', learnable=True),
+              NormalVariable(0., 1., 'x1', learnable=True)]
+        Qx_mean = [RootVariable(0., 'x0_mean', learnable=True),
+                   RootVariable(0., 'x1_mean', learnable=True)]
+        Qlambda = [RootVariable(-0.5, 'x0_lambda', learnable=True),
+                   RootVariable(-0.5, 'x1_lambda', learnable=True)]
+
+
+        for t in range(2, T):
             if t in y_range:
-                l = 0.
+                l = 1.
             else:
                 l = 1.
             Qx_mean.append(RootVariable(0, x_names[t] + "_mean", learnable=True))
             Qlambda.append(RootVariable(l, x_names[t] + "_lambda", learnable=True))
-            Qx.append(NormalVariable(BF.sigmoid(Qlambda[t]) * Qx[t - 1] + (1 - BF.sigmoid(Qlambda[t])) * Qx_mean[t],
+            new_mu = (-1 - omega ** 2 * dt ** 2 + b * dt) * Qx[t - 2] + (2 - b * dt) * Qx[t - 1]
+            Qx.append(NormalVariable(BF.sigmoid(Qlambda[t])*new_mu + (1 - BF.sigmoid(Qlambda[t]))*Qx_mean[t],
                                      np.sqrt(dt) * driving_noise, x_names[t], learnable=True))
         variational_posterior = ProbabilisticModel(Qx)
         AR_model.set_posterior_model(variational_posterior)
@@ -265,13 +276,13 @@ for cond, label in zip(condition_list, condition_label):
     c = {'PE': MSE1, 'ADVI (MF)': MSE2, "ADVI (MN)": MSE3, "NN": MSE4}
 
     import pickle
-    with open('{}_brownian_results.pickle'.format(label), 'wb') as f:
+    with open('{}_os_results.pickle'.format(label), 'wb') as f:
         pickle.dump(d, f)
 
     df = pd.DataFrame(data=c)
     df.boxplot()
     plt.title(label)
-    plt.ylabel("Brownian " + label + ".pdf")
+    plt.ylabel("Os" + label + ".pdf")
     plt.clf()
     #plt.show()
 

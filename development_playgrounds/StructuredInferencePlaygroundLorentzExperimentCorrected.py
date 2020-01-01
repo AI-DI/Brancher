@@ -17,12 +17,10 @@ N_rep = 15 #15
 condition_list = [lambda t: (t < 10 or t > 20), lambda t: (t < 0 or t > 20), lambda t: True]
 condition_label = ["Bridge", "Past", "Full"]
 
-N_itr = 500
-N_itr_NN = 500
-N_smpl = 20 #20
+N_itr = 1000 #400
+N_smpl = 20
 optimizer = "Adam"
-lr = 0.025 #0.02
-nn_lr = 0.025 #0.02
+lr = 0.005 #0.0002
 N_ELBO_smpl = 1000
 
 
@@ -40,8 +38,8 @@ for cond, label in zip(condition_list, condition_label):
         # Probabilistic model #
         T = 30 #30
         dt = 0.02
-        driving_noise = 0.2 #0.2
-        measure_noise = 0.2 #0.2
+        driving_noise = 0.1 #0.2
+        measure_noise = 1. #0.2
         s = 10.
         r = 28.
         b = 8 / 3.
@@ -308,7 +306,7 @@ for cond, label in zip(condition_list, condition_label):
         # Multivariate normal variational distribution #
 
         QV = MultivariateNormalVariable(loc=np.zeros((3*T,)),
-                                        scale_tril=np.identity(3*T),
+                                        scale_tril=0.5*np.identity(3*T),
                                         name="V",
                                         learnable=True)
         Qx = [NormalVariable(QV[0], 0.1, 'x0', learnable=True)]
@@ -374,10 +372,10 @@ for cond, label in zip(condition_list, condition_label):
 
         # Inference #
         inference.perform_inference(AR_model,
-                                    number_iterations=N_itr_NN,
+                                    number_iterations=N_itr,
                                     number_samples=N_smpl,
                                     optimizer=optimizer,
-                                    lr=nn_lr)
+                                    lr=lr)
 
         loss_list4 = AR_model.diagnostics["loss curve"]
 
@@ -404,21 +402,24 @@ for cond, label in zip(condition_list, condition_label):
 
         #
 
-        # # Two subplots, unpack the axes array immediately
-        # f, (ax1, ax2) = plt.subplots(1, 2)
-        # ax1.plot(range(T), x_mean1, color="b", label="PC")
-        # ax1.fill_between(range(T), lower_bound1, upper_bound1, color="b", alpha=0.25)
-        # ax1.plot(range(T), x_mean2, color="r", label="MF")
-        # ax1.fill_between(range(T), lower_bound2, upper_bound2, color="r", alpha=0.25)
-        # ax1.plot(range(T), x_mean4, color="g", label="NN")
-        # ax1.fill_between(range(T), lower_bound4, upper_bound4, color="g", alpha=0.25)
-        # #ax1.scatter(y_range, time_series, color="k")
-        # ax1.plot(range(T), ground_truth, color="k", ls="--", lw=1.5)
-        # ax1.set_title("Time series")
-        # ax2.plot(np.array(loss_list1), color="b")
-        # ax2.plot(np.array(loss_list2), color="r")
-        # ax2.plot(np.array(loss_list4), color="g")
-        # ax2.set_title("Convergence")
+        # Two subplots, unpack the axes array immediately
+        f, (ax1, ax2) = plt.subplots(1, 2)
+        ax1.plot(range(T), x_mean1, color="b", label="PC")
+        ax1.fill_between(range(T), lower_bound1, upper_bound1, color="b", alpha=0.25)
+        ax1.plot(range(T), x_mean2, color="r", label="MF")
+        ax1.fill_between(range(T), lower_bound2, upper_bound2, color="r", alpha=0.25)
+        ax1.plot(range(T), x_mean3, color="m", label="MN")
+        ax1.fill_between(range(T), lower_bound3, upper_bound3, color="m", alpha=0.25)
+        ax1.plot(range(T), x_mean4, color="g", label="NN")
+        ax1.fill_between(range(T), lower_bound4, upper_bound4, color="g", alpha=0.25)
+        #ax1.scatter(y_range, time_series, color="k")
+        ax1.plot(range(T), ground_truth, color="k", ls="--", lw=1.5)
+        ax1.set_title("Time series")
+        ax2.plot(np.array(loss_list1), color="b")
+        ax2.plot(np.array(loss_list2), color="r")
+        ax2.plot(np.array(loss_list3), color="m")
+        ax2.plot(np.array(loss_list4), color="g")
+        ax2.set_title("Convergence")
         # ax2.set_xlabel("Iteration")
         # plt.show()
 

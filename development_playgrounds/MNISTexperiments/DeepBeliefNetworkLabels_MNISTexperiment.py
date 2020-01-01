@@ -20,8 +20,8 @@ latent_size1 = 2
 latent_size2 = 50
 latent_size3 = 100
 
-train = torchvision.datasets.KMNIST(root='./data', train=True, download=True, transform=None)
-test = torchvision.datasets.KMNIST(root='./data', train=False, download=True, transform=None)
+train = torchvision.datasets.MNIST(root='./data', train=True, download=True, transform=None)
+test = torchvision.datasets.MNIST(root='./data', train=False, download=True, transform=None)
 dataset_size = len(train)
 dataset = np.reshape(train.train_data.numpy(), newshape=(dataset_size, image_size, 1))
 data_mean = np.mean(dataset)
@@ -152,7 +152,7 @@ class DecoderArchitectureLabel(nn.Module):
         output_logits = self.l1(x)
         return output_logits
 
-N_repetitions = 5
+N_repetitions = 5 #5
 num_itr = 3000
 N_ELBO = 10
 N_ELBO_ITR = 20
@@ -221,67 +221,67 @@ for rep in range(N_repetitions):
         ELBO1.append(model.estimate_log_model_evidence(N_ELBO).detach().numpy())
     print("MF ELBO: {} +- {}".format(np.mean(ELBO1), np.std(ELBO1) / np.sqrt(float(N_ELBO_ITR))))
 
-    ## Structered hierarchical model
-    # Initialize encoder and decoders
-    noise_inpt_size = 50
-    encoder1 = BF.BrancherFunction(
-        EncoderArchitecture1(image_size=image_size, latent_size3=latent_size3, noise_inpt_size=noise_inpt_size))
-    encoder2 = BF.BrancherFunction(
-        EncoderArchitecture2(latent_size2=latent_size2, latent_size3=latent_size3, noise_inpt_size=noise_inpt_size))
-    encoder3 = BF.BrancherFunction(
-        EncoderArchitecture3(latent_size1=latent_size1, latent_size2=latent_size2, noise_inpt_size=noise_inpt_size))
-
-    decoder1 = BF.BrancherFunction(DecoderArchitecture1(latent_size1=latent_size1, latent_size2=latent_size2))
-    decoder2 = BF.BrancherFunction(DecoderArchitecture2(latent_size2=latent_size2, latent_size3=latent_size3))
-    decoder3 = BF.BrancherFunction(DecoderArchitecture3(latent_size3=latent_size3, image_size=image_size))
-    decoderLabel = BF.BrancherFunction(DecoderArchitectureLabel(latent_size2=latent_size2, num_classes=num_classes))
-
-    # Generative model
-    z1 = NormalVariable(np.zeros((latent_size1,)), z1sd * np.ones((latent_size1,)), name="z1")
-    decoder_output1 = DeterministicVariable(decoder1(z1), name="decoder_output1")
-    z2 = NormalVariable(BF.relu(decoder_output1["mean"]), z2sd * np.ones((latent_size2,)), name="z2")
-    label_logits = DeterministicVariable(decoderLabel(z2), "label_logits")
-    labels = CategoricalVariable(logits=label_logits, name="labels")
-    decoder_output2 = DeterministicVariable(decoder2(z2), name="decoder_output2")
-    z3 = NormalVariable(BF.relu(decoder_output2["mean"]), z3sd * np.ones((latent_size3,)), name="z3")
-    decoder_output3 = DeterministicVariable(decoder3(z3), name="decoder_output3")
-    x = BinomialVariable(total_count=1, logits=decoder_output3["mean"], name="x")
-    model = ProbabilisticModel([x, z1, z2, z3, labels])
-
-    # Amortized variational distribution
-    minibatch_indices = RandomIndices(dataset_size=dataset_size, batch_size=b_size,
-                                      name="indices", is_observed=True)
-
-    Qx = EmpiricalVariable(dataset, indices=minibatch_indices,
-                           name="x", is_observed=True)
-
-    Qlabels = EmpiricalVariable(output_labels, indices=minibatch_indices,
-                                name="labels", is_observed=True)
-
-    noise_input = NormalVariable(np.zeros((noise_inpt_size,)), 0.02 * np.ones((noise_inpt_size,)), "noise_input",
-                                 learnable=True)
-    encoder_output1 = DeterministicVariable(encoder1(Qx, noise_input), name="encoder_output1")
-    Qz3 = NormalVariable(encoder_output1["mean"], encoder_output1["sd"], name="z3")
-    encoder_output2 = DeterministicVariable(encoder2(encoder_output1["mean"], noise_input), name="encoder_output2")
-    Qz2 = NormalVariable(encoder_output2["mean"], encoder_output2["sd"], name="z2")
-    encoder_output3 = DeterministicVariable(encoder3(encoder_output2["mean"], noise_input), name="encoder_output3")
-    Qz1 = NormalVariable(encoder_output3["mean"], encoder_output3["sd"], name="z1")
-    model.set_posterior_model(ProbabilisticModel([Qx, Qz1, Qz2, Qz3, Qlabels]))
-
-    # Joint-contrastive inference
-    inference.perform_inference(model,
-                                inference_method=ReverseKL(gradient_estimator=PathwiseDerivativeEstimator),
-                                number_iterations=num_itr,
-                                number_samples=1,
-                                optimizer="Adam",
-                                lr=0.0005)
-    loss_list3.append(np.array(model.diagnostics["loss curve"]))
-
-    ELBO3 = []
-    for n in range(N_ELBO_ITR):
-        ELBO3.append(model.estimate_log_model_evidence(N_ELBO).detach().numpy())
-    print("Hierarchical ELBO: {} +- {}".format(np.mean(ELBO3), np.std(ELBO3) / np.sqrt(float(N_ELBO_ITR))))
-
+    # ## Structered hierarchical model
+    # # Initialize encoder and decoders
+    # noise_inpt_size = 50
+    # encoder1 = BF.BrancherFunction(
+    #     EncoderArchitecture1(image_size=image_size, latent_size3=latent_size3, noise_inpt_size=noise_inpt_size))
+    # encoder2 = BF.BrancherFunction(
+    #     EncoderArchitecture2(latent_size2=latent_size2, latent_size3=latent_size3, noise_inpt_size=noise_inpt_size))
+    # encoder3 = BF.BrancherFunction(
+    #     EncoderArchitecture3(latent_size1=latent_size1, latent_size2=latent_size2, noise_inpt_size=noise_inpt_size))
+    #
+    # decoder1 = BF.BrancherFunction(DecoderArchitecture1(latent_size1=latent_size1, latent_size2=latent_size2))
+    # decoder2 = BF.BrancherFunction(DecoderArchitecture2(latent_size2=latent_size2, latent_size3=latent_size3))
+    # decoder3 = BF.BrancherFunction(DecoderArchitecture3(latent_size3=latent_size3, image_size=image_size))
+    # decoderLabel = BF.BrancherFunction(DecoderArchitectureLabel(latent_size2=latent_size2, num_classes=num_classes))
+    #
+    # # Generative model
+    # z1 = NormalVariable(np.zeros((latent_size1,)), z1sd * np.ones((latent_size1,)), name="z1")
+    # decoder_output1 = DeterministicVariable(decoder1(z1), name="decoder_output1")
+    # z2 = NormalVariable(BF.relu(decoder_output1["mean"]), z2sd * np.ones((latent_size2,)), name="z2")
+    # label_logits = DeterministicVariable(decoderLabel(z2), "label_logits")
+    # labels = CategoricalVariable(logits=label_logits, name="labels")
+    # decoder_output2 = DeterministicVariable(decoder2(z2), name="decoder_output2")
+    # z3 = NormalVariable(BF.relu(decoder_output2["mean"]), z3sd * np.ones((latent_size3,)), name="z3")
+    # decoder_output3 = DeterministicVariable(decoder3(z3), name="decoder_output3")
+    # x = BinomialVariable(total_count=1, logits=decoder_output3["mean"], name="x")
+    # model = ProbabilisticModel([x, z1, z2, z3, labels])
+    #
+    # # Amortized variational distribution
+    # minibatch_indices = RandomIndices(dataset_size=dataset_size, batch_size=b_size,
+    #                                   name="indices", is_observed=True)
+    #
+    # Qx = EmpiricalVariable(dataset, indices=minibatch_indices,
+    #                        name="x", is_observed=True)
+    #
+    # Qlabels = EmpiricalVariable(output_labels, indices=minibatch_indices,
+    #                             name="labels", is_observed=True)
+    #
+    # noise_input = NormalVariable(np.zeros((noise_inpt_size,)), 0.02 * np.ones((noise_inpt_size,)), "noise_input",
+    #                              learnable=True)
+    # encoder_output1 = DeterministicVariable(encoder1(Qx, noise_input), name="encoder_output1")
+    # Qz3 = NormalVariable(encoder_output1["mean"], encoder_output1["sd"], name="z3")
+    # encoder_output2 = DeterministicVariable(encoder2(encoder_output1["mean"], noise_input), name="encoder_output2")
+    # Qz2 = NormalVariable(encoder_output2["mean"], encoder_output2["sd"], name="z2")
+    # encoder_output3 = DeterministicVariable(encoder3(encoder_output2["mean"], noise_input), name="encoder_output3")
+    # Qz1 = NormalVariable(encoder_output3["mean"], encoder_output3["sd"], name="z1")
+    # model.set_posterior_model(ProbabilisticModel([Qx, Qz1, Qz2, Qz3, Qlabels]))
+    #
+    # # Joint-contrastive inference
+    # inference.perform_inference(model,
+    #                             inference_method=ReverseKL(gradient_estimator=PathwiseDerivativeEstimator),
+    #                             number_iterations=num_itr,
+    #                             number_samples=1,
+    #                             optimizer="Adam",
+    #                             lr=0.0005)
+    # loss_list3.append(np.array(model.diagnostics["loss curve"]))
+    #
+    # ELBO3 = []
+    # for n in range(N_ELBO_ITR):
+    #     ELBO3.append(model.estimate_log_model_evidence(N_ELBO).detach().numpy())
+    # print("Hierarchical ELBO: {} +- {}".format(np.mean(ELBO3), np.std(ELBO3) / np.sqrt(float(N_ELBO_ITR))))
+    #
     # Initialize encoder and decoders
     encoder1 = BF.BrancherFunction(EncoderArchitecture1(image_size=image_size, latent_size3=latent_size3))
     encoder2 = BF.BrancherFunction(EncoderArchitecture2(latent_size2=latent_size2, latent_size3=latent_size3))
@@ -391,22 +391,22 @@ for z1a in z_range:
     image_grid += [image_row]
     label_grid += [label_row]
 
-d = {"Loss": {"MF": loss_list1, "PC": loss_list2, "NN": loss_list1},
-     "ELBO": {"MF": ELBO1, "PC": ELBO2, "NN": ELBO3},
+d = {"Loss": {"MF": loss_list1, "PC": loss_list2},
+     "ELBO": {"MF": ELBO1, "PC": ELBO2},
      "Images": {"Images": image_grid, "Labels": label_grid}}
 
 import pickle
-with open('MNISTnetworkLabels.pickle', 'wb') as f:
+with open('fMNISTnetworkLabels.pickle', 'wb') as f:
     pickle.dump(d, f)
 
 #Plot results
-rng = range(2*num_itr)
-plt.plot(rng, loss_mean1, label="MF", c="r")
-plt.fill_between(rng, loss_mean1 - loss_se1, loss_mean1 + loss_se1, color="r", alpha=0.5)
-plt.plot(rng, loss_mean2, label="Structured (PC)", c="b")
-plt.fill_between(rng, loss_mean2 - loss_se2, loss_mean2 + loss_se2, color="b", alpha=0.5)
-plt.plot(rng, loss_mean3, label="Structured (Hierarchical)", c="g")
-plt.fill_between(rng, loss_mean3 - loss_se3, loss_mean3 + loss_se3, color="g", alpha=0.5)
-plt.legend(loc="best")
-plt.show()
+# rng = range(2*num_itr)
+# plt.plot(rng, loss_mean1, label="MF", c="r")
+# plt.fill_between(rng, loss_mean1 - loss_se1, loss_mean1 + loss_se1, color="r", alpha=0.5)
+# plt.plot(rng, loss_mean2, label="Structured (PC)", c="b")
+# plt.fill_between(rng, loss_mean2 - loss_se2, loss_mean2 + loss_se2, color="b", alpha=0.5)
+# plt.plot(rng, loss_mean3, label="Structured (Hierarchical)", c="g")
+# plt.fill_between(rng, loss_mean3 - loss_se3, loss_mean3 + loss_se3, color="g", alpha=0.5)
+# plt.legend(loc="best")
+# plt.show()
 
