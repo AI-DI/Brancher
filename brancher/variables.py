@@ -381,7 +381,13 @@ class Variable(BrancherClass):
         else:
             variable_slice = (slice(None, None, None), key)
         vars = {self}
-        fn = lambda values: values[self][variable_slice]
+        #fn = lambda values: values[self][variable_slice]
+        def fn(values):
+            v = values[self][variable_slice]
+            if is_tensor(v) and len(v.shape) < 2:
+                return torch.reshape(v, (v.shape[0], 1))
+            else:
+                return v
         links = set()
         return PartialLink(vars=vars, fn=fn, links=links)
 
@@ -1820,8 +1826,17 @@ class PartialLink(BrancherClass):
             raise ValueError("The input to __getitem__ is neither numeric nor a hashabble key")
 
         vars = self.vars
-        fn = lambda values: self.fn(values)[variable_slice] if is_tensor(self.fn(values)) \
-            else self.fn(values)[key]
+        #fn = lambda values: self.fn(values)[variable_slice] if is_tensor(self.fn(values)) \
+        #    else self.fn(values)[key]
+        def fn(values):
+            if is_tensor(self.fn(values)):
+                v = self.fn(values)[variable_slice]
+                if len(v.shape) < 2:
+                    return torch.reshape(v, (v.shape[0], 1))
+                else:
+                    return v
+            else:
+                return self.fn(values)[key]
         links = set()
         return PartialLink(vars=vars,
                            fn=fn,

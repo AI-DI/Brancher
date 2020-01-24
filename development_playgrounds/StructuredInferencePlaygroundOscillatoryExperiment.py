@@ -12,10 +12,10 @@ import brancher.functions as BF
 N_rep = 15 #10
 
 # Data list
-condition_list = [lambda t: (t < 0 or t > 30), lambda t: True, lambda t: (t < 10 or t > 30)]
-condition_label = ["Past", "Full", "Bridge"]
+condition_list = [lambda t: (t < 10 or t > 30), lambda t: (t < 0 or t > 30), lambda t: True]
+condition_label = ["Bridge", "Past", "Full"]
 
-N_itr = 400
+N_itr = 100
 N_smpl = 20
 optimizer = "SGD"
 lr = 0.0001 #0.0002

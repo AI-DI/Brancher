@@ -6,6 +6,8 @@ from brancher.standard_variables import NormalVariable, LogNormalVariable, BetaV
 from brancher import inference
 import brancher.functions as BF
 
+
+
 N_itr = 250
 N_smpl = 500
 optimizer = "SGD"

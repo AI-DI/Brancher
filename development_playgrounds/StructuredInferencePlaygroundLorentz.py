@@ -9,7 +9,7 @@ import brancher.functions as BF
 # Probabilistic model #
 T = 30
 dt = 0.02
-driving_noise = 1.
+driving_noise = 0.5
 measure_noise = 1.
 s = 10.
 r = 28.

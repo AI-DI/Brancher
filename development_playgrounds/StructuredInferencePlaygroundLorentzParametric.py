@@ -18,7 +18,7 @@ prior_list = np.linspace(0.1, 0.8, 8)
 N_itr = 200
 N_smpl = 20
 optimizer = "Adam"
-lr = 0.05 #0.0002
+lr = 0.1 #0.0002
 N_ELBO_smpl = 1000
 
 
