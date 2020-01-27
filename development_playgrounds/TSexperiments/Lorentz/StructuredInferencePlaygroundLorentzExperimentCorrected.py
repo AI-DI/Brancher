@@ -17,13 +17,13 @@ N_rep = 15 #15
 condition_list = [lambda t: (t < 10 or t > 20), lambda t: (t < 0 or t > 20), lambda t: True]
 condition_label = ["Bridge", "Past", "Full"]
 
-N_itr_PC = 200 #1500 #1000
+N_itr_PC = 400 #1500 #1000
 N_itr_MF = 1000
-N_itr_MN = 1000
-N_itr_NN = 250
+N_itr_MN = 2000
+N_itr_NN = 400
 N_smpl = 50
 optimizer = "Adam"
-lr = 0.05 #0.05
+lr = 0.05#0.05
 lr_mn = 0.01
 N_ELBO_smpl = 1000
 
@@ -42,8 +42,8 @@ for cond, label in zip(condition_list, condition_label):
         # Probabilistic model #
         T = 30 #30
         dt = 0.02
-        driving_noise = 0.5 #0.2
-        measure_noise = 1. #0.2
+        driving_noise = 0.5
+        measure_noise = 2. #1.
         s = 10.
         r = 28.
         b = 8 / 3.
@@ -87,44 +87,43 @@ for cond, label in zip(condition_list, condition_label):
         [yt.observe(data[yt][:, 0, :]) for yt in y]
 
         # Structured variational distribution #
-        Qx = [NormalVariable(0., driving_noise, 'x0', learnable=True)]
+        mx0 = DeterministicVariable(value=0., name="mx0", learnable=True)
+        Qx = [NormalVariable(mx0, 5*driving_noise, 'x0', learnable=True)]
         Qx_mean = [RootVariable(0., 'x0_mean', learnable=True)]
-        Qxlambda = [RootVariable(0.5, 'x0_lambda', learnable=True)]
+        Qxlambda = [RootVariable(-1., 'x0_lambda', learnable=True)]
 
-        Qh = [NormalVariable(0., driving_noise, 'h0', learnable=True)]
+        mh0 = DeterministicVariable(value=0., name="mh0", learnable=True)
+        Qh = [NormalVariable(mh0, 5*driving_noise, 'h0', learnable=True)]
         Qh_mean = [RootVariable(0., 'h0_mean', learnable=True)]
-        Qhlambda = [RootVariable(0.5, 'h0_lambda', learnable=True)]
+        Qhlambda = [RootVariable(-1., 'h0_lambda', learnable=True)]
 
-        Qz = [NormalVariable(0., driving_noise, 'z0', learnable=True)]
+        mz0 = DeterministicVariable(value=0., name="mz0", learnable=True)
+        Qz = [NormalVariable(mz0, 5*driving_noise, 'z0', learnable=True)]
         Qz_mean = [RootVariable(0., 'z0_mean', learnable=True)]
-        Qzlambda = [RootVariable(0., 'z0_lambda', learnable=True)]
+        Qzlambda = [RootVariable(-1., 'z0_lambda', learnable=True)]
 
         for t in range(1, T):
-            if t in y_range:
-                l = 0.  # 2
-            else:
-                l = 0.  # 2
             Qx_mean.append(RootVariable(0, x_names[t] + "_mean", learnable=True))
-            Qxlambda.append(RootVariable(l, x_names[t] + "_lambda", learnable=True))
+            Qxlambda.append(RootVariable(-1., x_names[t] + "_lambda", learnable=True))
 
             Qh_mean.append(RootVariable(0, h_names[t] + "_mean", learnable=True))
-            Qhlambda.append(RootVariable(l, h_names[t] + "_lambda", learnable=True))
+            Qhlambda.append(RootVariable(1., h_names[t] + "_lambda", learnable=True))
 
             Qz_mean.append(RootVariable(0, z_names[t] + "_mean", learnable=True))
-            Qzlambda.append(RootVariable(l, z_names[t] + "_lambda", learnable=True))
+            Qzlambda.append(RootVariable(1., z_names[t] + "_lambda", learnable=True))
 
             new_x = Qx[t - 1] + dt * s * (Qh[t - 1] - Qx[t - 1])
             new_h = Qh[t - 1] + dt * (Qx[t - 1] * (r - Qz[t - 1]) - Qh[t - 1])
             new_z = Qz[t - 1] + dt * (Qx[t - 1] * Qh[t - 1] - b * Qz[t - 1])
 
             Qx.append(NormalVariable(BF.sigmoid(Qxlambda[t]) * new_x + (1 - BF.sigmoid(Qxlambda[t])) * Qx_mean[t],
-                                     driving_noise, x_names[t], learnable=True))
+                                     2*driving_noise, x_names[t], learnable=True))
 
             Qh.append(NormalVariable(BF.sigmoid(Qhlambda[t]) * new_h + (1 - BF.sigmoid(Qhlambda[t])) * Qh_mean[t],
-                                     driving_noise, h_names[t], learnable=True))
+                                     2*driving_noise, h_names[t], learnable=True))
 
             Qz.append(NormalVariable(BF.sigmoid(Qzlambda[t]) * new_z + (1 - BF.sigmoid(Qzlambda[t])) * Qz_mean[t],
-                                     driving_noise, z_names[t], learnable=True))
+                                     2*driving_noise, z_names[t], learnable=True))
 
         variational_posterior = ProbabilisticModel(Qx + Qh + Qz)
         AR_model.set_posterior_model(variational_posterior)
@@ -332,26 +331,26 @@ for cond, label in zip(condition_list, condition_label):
 
         #
 
-        # Two subplots, unpack the axes array immediately
-        f, (ax1, ax2) = plt.subplots(1, 2)
-        ax1.plot(range(T), x_mean1, color="b", label="PC")
-        ax1.fill_between(range(T), lower_bound1, upper_bound1, color="b", alpha=0.25)
-        ax1.plot(range(T), x_mean2, color="r", label="MF")
-        ax1.fill_between(range(T), lower_bound2, upper_bound2, color="r", alpha=0.25)
-        ax1.plot(range(T), x_mean3, color="m", label="MN")
-        ax1.fill_between(range(T), lower_bound3, upper_bound3, color="m", alpha=0.25)
-        ax1.plot(range(T), x_mean4, color="g", label="NN")
-        ax1.fill_between(range(T), lower_bound4, upper_bound4, color="g", alpha=0.25)
-        #ax1.scatter(y_range, time_series, color="k")
-        ax1.plot(range(T), ground_truth, color="k", ls="--", lw=1.5)
-        ax1.set_title("Time series")
-        ax2.plot(np.array(loss_list1), color="b")
-        ax2.plot(np.array(loss_list2), color="r")
-        ax2.plot(np.array(loss_list3), color="m")
-        ax2.plot(np.array(loss_list4), color="g")
-        ax2.set_title("Convergence")
-        # ax2.set_xlabel("Iteration")
-        plt.show()
+        # # Two subplots, unpack the axes array immediately
+        # f, (ax1, ax2) = plt.subplots(1, 2)
+        # ax1.plot(range(T), x_mean1, color="b", label="PC")
+        # ax1.fill_between(range(T), lower_bound1, upper_bound1, color="b", alpha=0.25)
+        # ax1.plot(range(T), x_mean2, color="r", label="MF")
+        # ax1.fill_between(range(T), lower_bound2, upper_bound2, color="r", alpha=0.25)
+        # ax1.plot(range(T), x_mean3, color="m", label="MN")
+        # ax1.fill_between(range(T), lower_bound3, upper_bound3, color="m", alpha=0.25)
+        # ax1.plot(range(T), x_mean4, color="g", label="NN")
+        # ax1.fill_between(range(T), lower_bound4, upper_bound4, color="g", alpha=0.25)
+        # ax1.scatter(y_range[:-1], time_series, color="k")
+        # ax1.plot(range(T), ground_truth, color="k", ls="--", lw=1.5)
+        # ax1.set_title("Time series")
+        # ax2.plot(np.array(loss_list1), color="b")
+        # ax2.plot(np.array(loss_list2), color="r")
+        # ax2.plot(np.array(loss_list3), color="m")
+        # ax2.plot(np.array(loss_list4), color="g")
+        # ax2.set_title("Convergence")
+        # # ax2.set_xlabel("Iteration")
+        # plt.show()
 
     d = {'PE': {"Lk": Lk1, "MSE": MSE1}, 'ADVI (MF)': {"Lk": Lk2, "MSE": MSE2}, "ADVI (MN)": {"Lk": Lk3, "MSE": MSE3}, "NN": {"Lk": Lk4, "MSE": MSE4}}
     c = {'PE': MSE1, 'ADVI (MF)': MSE2, "ADVI (MN)": MSE3, "NN": MSE4}

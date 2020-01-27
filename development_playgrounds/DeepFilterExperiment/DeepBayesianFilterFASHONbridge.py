@@ -185,7 +185,7 @@ for rep in range(N_rep):
         psamples = model._get_posterior_sample(1)
         im_list3.append([np.reshape(psamples[img[t]].detach().numpy(), (3, image_size, image_size))
                          for t in range(T)])
-    images1.append(im_list3)
+    images3.append(im_list3)
 
 d = {"Loss": [loss_list1, loss_list2, loss_list3], "Images": [images1, images2, images3], "Truth images": {"GT": imagesGT, "Noisy": imagesNoise}}
 
