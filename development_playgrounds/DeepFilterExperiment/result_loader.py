@@ -1,6 +1,6 @@
 import pickle
 
-filename = 'CIFAR_filter_results.pickle'
+filename = 'F_bridge_results.pickle'
 
 with open(filename, 'rb') as f:
     x = pickle.load(f)
