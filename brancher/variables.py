@@ -304,6 +304,30 @@ class Variable(BrancherClass):
         """
         return not self.is_observed and all([not a.is_observed for a in self.ancestors])
 
+    @property
+    def is_policy(self):
+        """
+        Method. It returns if variable is a reinforcement learning policy.
+
+        Args: None.
+
+        Returns:
+            Bool.
+        """
+        return self._policy
+
+    @property
+    def is_reward(self):
+        """
+        Method. It returns if variable is a reinforcement learning reward.
+
+        Args: None.
+
+        Returns:
+            Bool.
+        """
+        return self._reward
+
     def __str__(self):
         """
         Method. Returns name of variable
@@ -384,10 +408,10 @@ class Variable(BrancherClass):
         #fn = lambda values: values[self][variable_slice]
         def fn(values):
             v = values[self][variable_slice]
-            if is_tensor(v) and len(v.shape) < 2:
-                return torch.reshape(v, (v.shape[0], 1))
-            else:
-                return v
+            if is_tensor(v):
+                while len(v.shape) < 3:
+                    v = torch.reshape(v, v.shape + tuple([1]))
+            return v
         links = set()
         return PartialLink(vars=vars, fn=fn, links=links)
 
@@ -443,6 +467,10 @@ class RootVariable(Variable):
             else:
                 self.learnable = False
                 warnings.warn('Currently discrete parameters are not learnable. Learnable set to False')
+
+        # Reinforcement learning descriptors
+        self._policy = False
+        self._reward = False
 
     def calculate_log_probability(self, values, reevaluate=True, for_gradient=False, normalized=True, include_parents=False):
         """
@@ -605,6 +633,10 @@ class RandomVariable(Variable):
         self.has_observed_value = False
         self.silenced = False
 
+        # Reinforcement learning descriptors
+        self._policy = False
+        self._reward = False
+
     @property
     def value(self):
         """
@@ -623,7 +655,7 @@ class RandomVariable(Variable):
     @property
     def is_observed(self):
         """
-        Method. It returns whether variable is observed or not.
+        Method. It returns if variable is observed.
 
         Args: None.
 
@@ -721,7 +753,7 @@ class RandomVariable(Variable):
         Returns:
             torch.Tensor. The log probability of the input values given the model.
         """
-        if self.silenced or (self._evaluated and not reevaluate):
+        if self.silenced or self.is_reward or (self._evaluated and not reevaluate):
             return 0.
         value = self._get_its_own_value_from_input(input_values, reevaluate)
         self._evaluated = True
@@ -763,7 +795,7 @@ class RandomVariable(Variable):
         itself.
 
         Args:
-            number_samples: Int. Number of samples that need to be samples.
+            number_samples: Int. Number of samples.
 
             resample: Bool. If false it returns the previously sampled values. It avoids that the parents of a variable
             are sampled multiple times.
@@ -814,6 +846,8 @@ class RandomVariable(Variable):
         Returns:
             None.
         """
+        if self.is_policy or self.is_reward:
+            raise ValueError("RL policy and reward variables cannot be observed")
         data = pandas_frame2value(data, self.name)
         if isinstance(data, RandomVariable):
             self.dataset = data
@@ -1127,6 +1161,30 @@ class ProbabilisticModel(BrancherClass):
         self.reset()
         return log_probability
 
+    def get_average_reward(self, number_samples=1, observed=None, input_values={}, differentiable=True):
+        """
+        Method. It estimates the average RL reward from a joint sample from all variables in the model.
+
+        Args:
+            number_samples: Int. Number of samples.
+
+            resample: Bool. If false it returns the previously sampled values. It avoids that the parents of a variable
+            are sampled multiple times.
+
+            observed: Bool. It specifies if the sample should be formatted as observed data or Bayesian parameter.
+
+            input_values: Dictionary(brancher.Variable: torch.Tensor, numeric, or np.ndarray).  dictionary of values of
+            the parents. It is used for conditioning the sample on the (inputed) values of some of the variables.
+
+            differentiable: Bool. Set to True if this function is used for differentiation.
+
+        Returns:
+            torch.Tensor. The average reward.
+        """
+        samples = self._get_sample(number_samples=number_samples, observed=observed,
+                                   input_values=input_values, differentiable=differentiable)
+        return sum([r.sum() if is_tensor(r) else sum(r) for var, r in samples.items() if var.is_reward])/float(number_samples)
+
     def _get_statistic(self, query, input_values):
         """
         Private method. It returns a statistical value of the distributions of all variables in the model given a query
@@ -1148,7 +1206,7 @@ class ProbabilisticModel(BrancherClass):
         Private method. Used internally. It returns a joint sample from all variables in the model.
 
         Args:
-            number_samples: Int. Number of samples that need to be samples.
+            number_samples: Int. Number of samples.
 
             resample: Bool. If false it returns the previously sampled values. It avoids that the parents of a variable
             are sampled multiple times.
@@ -1161,7 +1219,7 @@ class ProbabilisticModel(BrancherClass):
             differentiable: Bool. Set to True if this function is used for differentiation.
 
         Returns:
-            Dictionary(brancher.Variable: torch.Tensor). A dictionary of samples from the variable and all its parents.
+            Dictionary(brancher.Variable: torch.Tensor). A dictionary of samples from the variables.
         """
         joint_sample = join_dicts_list([var._get_sample(number_samples=number_samples, resample=False,
                                                         observed=observed, input_values=input_values,
@@ -1325,7 +1383,7 @@ class ProbabilisticModel(BrancherClass):
         conditionals for sampling this model.
 
         Args:
-            number_samples: Integer. Number of samples that need to be samples.
+            number_samples: Integer. Number of samples.
 
             input_values: Dictionary(brancher.Variable: torch.Tensor, numeric, or np.ndarray). A dictionary of values of
             the parents. It is used for conditioning the posterior model on the (inputed) values.
@@ -1636,7 +1694,7 @@ class Ensemble(BrancherClass):
         Private method. Used internally. It returns a joint sample from all variables in the model.
 
         Args:
-            number_samples: Int. Number of samples that need to be samples.
+            number_samples: Int. Number of samples.
 
             resample: Bool. If false it returns the previously sampled values. It avoids that the parents of a variable
             are sampled multiple times.
@@ -1668,7 +1726,6 @@ class Ensemble(BrancherClass):
     #                                                          normalized=normalized)
     #                          for model in self.model_list]
     #     alpha = np.max(log_probabilities)
-
 
     def _flatten(self):
         """
@@ -1831,10 +1888,9 @@ class PartialLink(BrancherClass):
         def fn(values):
             if is_tensor(self.fn(values)):
                 v = self.fn(values)[variable_slice]
-                if len(v.shape) < 2:
-                    return torch.reshape(v, (v.shape[0], 1))
-                else:
-                    return v
+                while len(v.shape) < 3:
+                    v = torch.reshape(v, v.shape + tuple([1]))
+                return v
             else:
                 return self.fn(values)[key]
         links = set()

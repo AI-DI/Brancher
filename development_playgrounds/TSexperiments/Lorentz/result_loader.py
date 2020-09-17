@@ -1,7 +1,7 @@
 import pickle
 import numpy as np
 
-filename = 'Full_brownian_results.pickle'
+filename = 'Bridge_lorentz_results.pickle'
 
 with open(filename, 'rb') as f:
     x = pickle.load(f)

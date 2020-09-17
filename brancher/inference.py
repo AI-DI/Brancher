@@ -33,6 +33,10 @@ def perform_inference(joint_model, number_iterations, number_samples = 1,
                       posterior_model=None,
                       sampler_model=None,
                       pretraining_iterations=0,
+                      VI_opt_params=None,
+                      ML_opt_params=None,
+                      sampler_opt_params=None,
+                      RL_opt_params=None,
                       **opt_params): #TODO: input values
     """
     Summary
@@ -72,15 +76,29 @@ def perform_inference(joint_model, number_iterations, number_samples = 1,
         if prob_opt.optimizer:
             optimizers_list.append(prob_opt)
 
+    if VI_opt_params is None:
+        VI_opt_params = opt_params
+    if ML_opt_params is None:
+        ML_opt_params = opt_params
+    if sampler_opt_params is None:
+        sampler_opt_params = opt_params
+    if RL_opt_params is None:
+        RL_opt_params = opt_params
+
     optimizers_list = []
     if inference_method.learnable_posterior:
-        append_prob_optimizer(posterior_model, optimizer, **opt_params)
+        append_prob_optimizer([var for var in posterior_model.variables if not var.is_policy and not var.is_reward], optimizer, **VI_opt_params)
     if inference_method.learnable_model:
-        append_prob_optimizer(joint_model, optimizer, **opt_params)
+        append_prob_optimizer([var for var in joint_model.variables if not var.is_policy and not var.is_reward], optimizer, **ML_opt_params)
     if inference_method.learnable_sampler:
-        append_prob_optimizer(sampler_model, optimizer, **opt_params)
+        append_prob_optimizer([var for var in sampler_model.variables if not var.is_policy and not var.is_reward], optimizer, **sampler_opt_params)
+
+    policy_variables = [var for var in joint_model.variables if var.is_policy]
+    if policy_variables:
+        policy_optimizer = ProbabilisticOptimizer(policy_variables, optimizer, **RL_opt_params)
 
     loss_list = []
+    reward_list = []
 
     inference_method.check_model_compatibility(joint_model, posterior_model, sampler_model)
 
@@ -88,19 +106,32 @@ def perform_inference(joint_model, number_iterations, number_samples = 1,
         loss = inference_method.compute_loss(joint_model, posterior_model, sampler_model, number_samples)
 
         if torch.isfinite(loss.detach()).all().item():
-            [opt.zero_grad() for opt in optimizers_list]
-            loss.backward()
-            inference_method.correct_gradient(joint_model, posterior_model, sampler_model, number_samples)
-            optimizers_list[0].update()
-            if iteration > pretraining_iterations:
-                [opt.update() for opt in optimizers_list[1:]]
-            loss_list.append(loss.cpu().detach().numpy().flatten())
+            # Inference
+            if optimizers_list:
+                [opt.zero_grad() for opt in optimizers_list]
+                loss.backward()
+                inference_method.correct_gradient(joint_model, posterior_model, sampler_model, number_samples)
+                optimizers_list[0].update()
+                if iteration > pretraining_iterations:
+                    [opt.update() for opt in optimizers_list[1:]]
+                loss_list.append(loss.cpu().detach().numpy().flatten())
+
+            # Control
+            if policy_variables:
+                [opt.zero_grad() for opt in optimizers_list]
+                policy_optimizer.zero_grad()
+                reward = joint_model.get_average_reward(number_samples)
+                (-reward).backward()
+                policy_optimizer.update()
+                reward_list.append(reward.cpu().detach().numpy().flatten())
         else:
             warnings.warn("Numerical error, skipping sample")
         loss_list.append(loss.cpu().detach().numpy())
     joint_model.diagnostics.update({"loss curve": np.array(loss_list)})
+    if policy_variables:
+        joint_model.diagnostics.update({"reward curve": np.array(reward_list)})
 
-    inference_method.post_process(joint_model) #TODO: this could be implemented with a with block
+    inference_method.post_process(joint_model)
 
     if joint_model.posterior_model is None and inference_method.learnable_posterior:
         inference_method.set_posterior_model_after_inference(joint_model, posterior_model, sampler_model)
@@ -150,7 +181,7 @@ class ReverseKL(InferenceMethod):
         pass
 
     def construct_posterior_model(self, joint_model):
-        raise ValueError("The variational model cannot be constructed automatically as the latent submodel does not contains all the variables")
+        raise ValueError("The variational model cannot be constructed automatically")
 
     def set_posterior_model_after_inference(self, joint_model, posterior_model, sampler_model):
         joint_model.set_posterior_model(posterior_model)

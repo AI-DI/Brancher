@@ -15,7 +15,7 @@ N_rep = 15 #15
 
 # Data list
 condition_list = [lambda t: (t < 10 or t > 20), lambda t: (t < 0 or t > 20), lambda t: True]
-condition_label = ["Bridge", "Past", "Full"]
+condition_label = ["Bridge", "Full", "Past"]
 
 N_itr_PC = 400 #1500 #1000
 N_itr_MF = 2000
@@ -331,26 +331,26 @@ for cond, label in zip(condition_list, condition_label):
 
         #
 
-        # Two subplots, unpack the axes array immediately
-        f, (ax1, ax2) = plt.subplots(1, 2)
-        ax1.plot(range(T), x_mean1, color="b", label="PC")
-        ax1.fill_between(range(T), lower_bound1, upper_bound1, color="b", alpha=0.25)
-        ax1.plot(range(T), x_mean2, color="r", label="MF")
-        ax1.fill_between(range(T), lower_bound2, upper_bound2, color="r", alpha=0.25)
-        ax1.plot(range(T), x_mean3, color="m", label="MN")
-        ax1.fill_between(range(T), lower_bound3, upper_bound3, color="m", alpha=0.25)
-        ax1.plot(range(T), x_mean4, color="g", label="NN")
-        ax1.fill_between(range(T), lower_bound4, upper_bound4, color="g", alpha=0.25)
-        ax1.scatter(y_range[:-1], time_series, color="k")
-        ax1.plot(range(T), ground_truth, color="k", ls="--", lw=1.5)
-        ax1.set_title("Time series")
-        ax2.plot(np.array(loss_list1), color="b")
-        ax2.plot(np.array(loss_list2), color="r")
-        ax2.plot(np.array(loss_list3), color="m")
-        ax2.plot(np.array(loss_list4), color="g")
-        ax2.set_title("Convergence")
-        # ax2.set_xlabel("Iteration")
-        plt.show()
+        # # Two subplots, unpack the axes array immediately
+        # f, (ax1, ax2) = plt.subplots(1, 2)
+        # ax1.plot(range(T), x_mean1, color="b", label="PC")
+        # ax1.fill_between(range(T), lower_bound1, upper_bound1, color="b", alpha=0.25)
+        # ax1.plot(range(T), x_mean2, color="r", label="MF")
+        # ax1.fill_between(range(T), lower_bound2, upper_bound2, color="r", alpha=0.25)
+        # ax1.plot(range(T), x_mean3, color="m", label="MN")
+        # ax1.fill_between(range(T), lower_bound3, upper_bound3, color="m", alpha=0.25)
+        # ax1.plot(range(T), x_mean4, color="g", label="NN")
+        # ax1.fill_between(range(T), lower_bound4, upper_bound4, color="g", alpha=0.25)
+        # ax1.scatter(y_range[:-1], time_series, color="k")
+        # ax1.plot(range(T), ground_truth, color="k", ls="--", lw=1.5)
+        # ax1.set_title("Time series")
+        # ax2.plot(np.array(loss_list1), color="b")
+        # ax2.plot(np.array(loss_list2), color="r")
+        # ax2.plot(np.array(loss_list3), color="m")
+        # ax2.plot(np.array(loss_list4), color="g")
+        # ax2.set_title("Convergence")
+        # # ax2.set_xlabel("Iteration")
+        # plt.show()
 
     d = {'PE': {"Lk": Lk1, "MSE": MSE1}, 'ADVI (MF)': {"Lk": Lk2, "MSE": MSE2}, "ADVI (MN)": {"Lk": Lk3, "MSE": MSE3}, "NN": {"Lk": Lk4, "MSE": MSE4}}
     c = {'PE': MSE1, 'ADVI (MF)': MSE2, "ADVI (MN)": MSE3, "NN": MSE4}
